@@ -1,0 +1,27 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Commitlint
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+  push:
+    branches: [main]
+
+# Grant the token read access to PRs (needed to list PR commits)
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: .commitlintrc.json
+          failOnWarnings: true
+          failOnErrors: true
+          token: ${{ secrets.GITHUB_TOKEN }}

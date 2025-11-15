@@ -1,0 +1,66 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "dependencyDashboard": true,
+
+  "enabledManagers": ["pep621", "github-actions", "pre-commit"],
+
+  "rangeStrategy": "bump",
+  "automerge": false,
+  "rebaseWhen": "conflicted",
+  "stabilityDays": 3,
+  "ignoreUnstable": true,
+
+  "packageRules": [
+    {
+      "description": "Automerge GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "automerge": true,
+      "stabilityDays": 0
+    },
+    {
+      "description": "Automerge patch updates after stability period",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "stabilityDays": 1
+    },
+    {
+      "description": "Enable minor updates with stability check",
+      "matchUpdateTypes": ["minor"],
+      "enabled": true,
+      "stabilityDays": 3
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "enabled": true,
+      "dependencyDashboardApproval": true,
+      "stabilityDays": 7
+    },
+    {
+      "description": "Separate PR for pre-commit hooks",
+      "matchManagers": ["pre-commit"],
+      "groupName": "pre-commit hooks"
+    },
+    {
+      "description": "Group Python dependencies",
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Python dependencies"
+    }
+  ],
+
+  "schedule": ["after 02:00 on monday"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 8,
+
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": "chore(deps):",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "{{depName}}",
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
+}

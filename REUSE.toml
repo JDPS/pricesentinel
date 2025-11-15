@@ -1,0 +1,79 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+version = 1
+
+SPDX-PackageName = "PriceSentinel"
+SPDX-PackageSupplier = "joaosoarex@gmail.com"
+SPDX-PackageDownloadLocation = "https://github.com/JDPS/pricesentinel"
+
+# Python source files
+[[annotations]]
+path = ["**/*.py"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Configuration files
+[[annotations]]
+path = [".gitignore", ".gitattributes", ".env.example", "pytest.ini", "requirements.txt", "renovate.json"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Documentation files
+[[annotations]]
+path = ["**/*.md"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# YAML and JSON config files
+[[annotations]]
+path = ["**/*.yaml", "**/*.yml", "**/*.json", "*.json"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Data files
+[[annotations]]
+path = ["data/**/*.csv", "data/**/*.parquet"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Log files
+[[annotations]]
+path = ["logs/*.log"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# SVG files
+[[annotations]]
+path = ["coverage.svg"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Toml files
+[[annotations]]
+path = ["pyproject.toml"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Look files
+[[annotations]]
+path = ["uv.lock"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
+# Others
+[[annotations]]
+path = [".python-version", "renovate.json.improved"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"

@@ -1,0 +1,93 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2022]
+        python-version: ["3.13"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # --- Install uv the simple way (no cache, no path shenanigans) ---
+      - name: Install uv (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip uv
+          python -c "import shutil; print('uv at:', shutil.which('uv'))"
+          uv --version
+
+      - name: Install uv (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip uv
+          Write-Host "uv at: " (Get-Command uv).Path
+          uv --version
+
+      # --- Use uv as planned ---
+      - name: Sync deps (dev) [Linux/macOS]
+        if: runner.os != 'Windows'
+        shell: bash
+        run: uv sync --all-extras
+
+      - name: Sync deps (dev) [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: uv sync --all-extras
+
+      - name: Ruff [Linux/macOS]
+        if: runner.os != 'Windows'
+        shell: bash
+        run: uv run ruff check .
+
+      - name: Ruff [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: uv run ruff check .
+
+      - name: mypy [Linux/macOS]
+        if: runner.os != 'Windows'
+        shell: bash
+        run: uv run mypy .
+
+      - name: mypy [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: uv run mypy .
+
+      - name: pytest [Linux/macOS]
+        if: runner.os != 'Windows'
+        shell: bash
+        run: uv run pytest -q
+
+      - name: pytest [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: uv run pytest -q
+
+      - name: Build package (sdist+wheel)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          uv run python -m pip install build
+          uv run python -m build

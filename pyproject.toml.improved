@@ -1,0 +1,212 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pricesentinel"
+version = "0.1.0"
+description = "Multi-country energy price forecasting with event awareness and data quality guards"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Soares", email = "joaosoarex@gmail.com"},
+]
+maintainers = [
+    {name = "Soares", email = "joaosoarex@gmail.com"},
+]
+keywords = [
+    "energy",
+    "forecasting",
+    "electricity-prices",
+    "machine-learning",
+    "time-series",
+    "energy-markets",
+    "price-prediction",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "pandas-stubs>=2.3.2.250926,<2.4",
+    "pydantic>=2.12.4,<3",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
+    "xmltodict>=0.14.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.4",
+    "mypy>=1.14.1",
+    "pre-commit>=4.0.0",
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.32.0",
+]
+test = [
+    "pytest>=9.0.1",
+    "pytest-cov>=6.0.0",
+    "pytest-xdist>=3.6.1",
+]
+security = [
+    "pip-audit>=2.7.0",
+    "bandit>=1.8.0",
+]
+build = [
+    "build>=1.2.1",
+    "twine>=5.1.0",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.26.0",
+]
+all = [
+    "pricesentinel[dev,test,security,build,docs]",
+]
+
+[project.urls]
+Homepage = "https://github.com/JDPS/pricesentinel"
+Repository = "https://github.com/JDPS/pricesentinel"
+Documentation = "https://github.com/JDPS/pricesentinel#readme"
+Issues = "https://github.com/JDPS/pricesentinel/issues"
+
+[project.scripts]
+pricesentinel = "run_pipeline:main"
+
+# Tool configurations consolidated
+
+[tool.uv]
+dev-dependencies = [
+    # Development dependencies managed by uv
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "-ra",
+    "--cov=.",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests spanning multiple components",
+    "slow: Tests that take a long time to run",
+    "api: Tests that require external API access",
+]
+norecursedirs = [".git", ".venv", "venv", "env", "data", "logs", "outputs", "models"]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "venv/*",
+    "verify_fixes.py",
+    "setup_country.py",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "pass",
+]
+fail_under = 75
+show_missing = true
+precision = 2
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = true
+strict_equality = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "requests.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E", "F",        # pyflakes/pycodestyle
+    "I",             # isort
+    "UP",            # pyupgrade
+    "B",             # bugbear
+    "S",             # bandit (security)
+    "N",             # pep8-naming
+    "ARG",           # unused function args
+    "C4",            # comprehensions
+    "DTZ",           # timezone
+    "T20",           # print statements
+    "PYI",
+]
+ignore = [
+    "S101",  # allow asserting in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "ARG"]
+"verify_fixes.py" = ["T201"]
+"run_pipeline.py" = ["T201", "DTZ007"]
+"setup_country.py" = ["T201"]
+"core/abstractions.py" = ["ARG002"]
+"config/validation.py" = ["N805"]
+"core/logging_config.py" = ["DTZ005"]
+"core/pipeline.py" = ["DTZ005"]
+"data_fetchers/**/*.py" = ["DTZ007", "F841"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"

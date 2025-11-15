@@ -1,0 +1,41 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+target-version = "py313"
+line-length = 100
+
+# Linting configuration moves under the `lint` table.
+[lint]
+select = [
+  "E", "F",        # pyflakes/pycodestyle
+  "I",             # isort
+  "UP",            # pyupgrade
+  "B",             # bugbear
+  "S",             # bandit (security)
+  "N",             # pep8-naming
+  "ARG",           # unused function args
+  "C4",            # comprehensions
+  "DTZ",           # timezone
+  "T20",           # print statements
+  "PYI",
+]
+ignore = [
+  "S101",  # allow asserting in tests
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S", "ARG"]
+"verify_fixes.py" = ["T201"]  # Allow print statements in verification script
+"run_pipeline.py" = ["T201", "DTZ007"]  # CLI script uses print for output
+"setup_country.py" = ["T201"]  # CLI script uses print for output
+"tasks.py" = ["T201"]  # Task runner uses print for output
+"main.py" = ["T201"]  # Entry point uses print
+"core/abstractions.py" = ["ARG002"]  # Allow unused args in abstract methods
+"config/validation.py" = ["N805"]  # Pydantic validators use cls
+"core/logging_config.py" = ["DTZ005"]  # Datetime for log filenames doesn't need tz
+"core/pipeline.py" = ["DTZ005"]  # Run IDs don't need timezone
+"data_fetchers/**/*.py" = ["DTZ007", "F841"]  # Data fetchers handle timezone conversion separately
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"

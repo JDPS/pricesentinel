@@ -1,0 +1,28 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Weekly Security Audit
+
+on:
+  schedule:
+    - cron: "0 2 * * 1"  # Mondays at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        shell: bash
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Sync dev deps
+        run: uv sync --dev
+      - name: Run pip-audit
+        run: uv run pip-audit || true

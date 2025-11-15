@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Data files (keep structure, ignore content)
+data/*/raw/*
+data/*/processed/*
+!data/**/raw/.gitkeep
+!data/**/processed/.gitkeep
+*.csv
+*.parquet
+*.pkl
+*.h5
+*.hdf5
+
+# Model files
+models/*/
+!models/.gitkeep
+model_registry.json
+
+# Logs
+logs/
+*.log
+
+# Outputs
+outputs/
+reports/*.png
+reports/*.html
+!reports/.gitkeep
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Private/Local directories
+.claude/
+dev_ws/
+/.dev_ws/

@@ -1,0 +1,32 @@
+# Mock Country Configuration
+# This is a test configuration for validating the abstraction layer
+
+country_code: XX
+country_name: Mock Country
+timezone: UTC
+
+electricity:
+  api_type: custom
+  market_type: day_ahead
+
+weather:
+  api_type: custom
+  coordinates:
+    - name: MockCity
+      lat: 40.0
+      lon: -8.0
+
+gas:
+  api_type: custom
+  hub_name: MockHub
+  currency: EUR
+
+events:
+  holiday_library: mock
+  manual_events_path: data/XX/events/manual_events.csv
+  persistence_required: 1
+
+features:
+  use_cross_border_flows: false
+  neighbors: []
+  custom_feature_plugins: []

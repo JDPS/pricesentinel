@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "dependencyDashboard": false,
+
+  "enabledManagers": ["pip_requirements"],
+
+  "rangeStrategy": "pin",
+  "automerge": false,
+  "rebaseWhen": "conflicted",
+  "stabilityDays": 7,
+  "ignoreUnstable": true,
+
+  "packageRules": [
+    { "updateTypes": ["major", "minor"], "enabled": false },
+    { "matchManagers": ["github-actions"], "enabled": false }
+  ],
+
+  "schedule": ["after 02:00 on monday"],
+
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 4
+}
