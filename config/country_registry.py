@@ -17,6 +17,8 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+configure_directory: str = "config/countries"
+
 
 class CountryConfig:
     """
@@ -43,7 +45,9 @@ class CountryConfig:
         self.features_config = config_dict.get("features", {})
 
     @classmethod
-    def from_yaml(cls, country_code: str, config_dir: str = "config/countries") -> "CountryConfig":
+    def from_yaml(
+        cls, country_code: str, config_dir: str = "configure_directory"
+    ) -> "CountryConfig":
         """
         Load country configuration from the YAML file.
 
@@ -175,7 +179,7 @@ class CountryRegistry:
             country_code: ISO 3166-1 alpha-2 code
 
         Returns:
-            True if country is registered, False otherwise
+            True if the country is registered, False otherwise
         """
         return country_code in cls._registry
 
@@ -197,7 +201,7 @@ class FetcherFactory:
     """
 
     @staticmethod
-    def create_fetchers(country_code: str, config_dir: str = "config/countries") -> dict:
+    def create_fetchers(country_code: str, config_dir: str = configure_directory) -> dict:
         """
         Create fetcher instances for a country.
 
@@ -253,7 +257,7 @@ class ConfigLoader:
 
     @staticmethod
     def load_country_config(
-        country_code: str, config_dir: str = "config/countries"
+        country_code: str, config_dir: str = configure_directory
     ) -> CountryConfig:
         """
         Load and return country configuration.

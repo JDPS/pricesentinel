@@ -28,20 +28,50 @@ def auto_register_countries():
     # Register a mock country for testing
     try:
         from data_fetchers.mock import register_mock_country
-
-        register_mock_country()
-        logger.info("Registered mock country (XX)")
     except ImportError as e:
         logger.warning(f"Could not register mock country: {e}")
+
+        def register_mock_country():
+            """
+            Registers a mock country for testing purposes if the mock fetcher
+            module is not available. If unavailable, this function performs
+            no operation and logs a debugging message.
+
+            Returns:
+                None: This function does not return anything.
+            """
+            # Fallback no-op if mock fetcher is unavailable
+            logger.debug("Mock country registration skipped; module unavailable.")
+            return
+
+        register_mock_country()
+    else:
+        register_mock_country()
+        logger.info("Registered mock country (XX)")
 
     # Register Portugal
     try:
         from data_fetchers.portugal import register_portugal
-
-        register_portugal()
-        logger.info("Registered Portugal (PT)")
     except ImportError as e:
         logger.warning(f"Could not register Portugal: {e}")
+
+        def register_portugal():
+            """
+            Registers a mock country for testing purposes if the mock fetcher
+            module is not available. If unavailable, this function performs
+            no operation and logs a debugging message.
+
+            Returns:
+                None: This function does not return anything.
+            """
+            # Fallback no-op if mock fetcher is unavailable
+            logger.debug("Portugal registration skipped; module unavailable.")
+            return
+
+        register_portugal()
+    else:
+        register_portugal()
+        logger.info("Registered Portugal (PT)")
 
     # Future countries will be registered here:
     # try:

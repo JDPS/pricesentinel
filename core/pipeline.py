@@ -4,7 +4,7 @@
 
 """
 4
-Country-agnostic pipeline orchestration.
+Country-agnostic pipelines orchestration.
 
 This module provides the main Pipeline class that orchestrates all stages
 of the forecasting workflow while remaining completely country-agnostic.
@@ -54,7 +54,7 @@ class Pipeline:
         # Ensure directories exist
         self.data_manager.create_directories()
 
-        logger.info(f"Initialized pipeline for {self.country_code} " f"(run_id: {self.run_id})")
+        logger.info(f"Initialized pipeline for {self.country_code} (run_id: {self.run_id})")
 
     def fetch_data(self, start_date: str, end_date: str):
         """
@@ -69,71 +69,86 @@ class Pipeline:
 
         # Fetch electricity prices
         logger.info("Fetching electricity prices...")
+
+    def _fetch_and_store(
+        self,
+        fetch_fn,
+        dataset_key: str,
+        filename_prefix: str,
+        start_date: str,
+        end_date: str,
+        empty_msg: str,
+        success_msg: str,
+    ) -> None:
+        """
+        Fetches data using the specified fetch function and stores it in a file.
+
+        This method uses the provided fetch function to retrieve data between the given
+        start and end dates. If data is retrieved successfully and is not empty, it
+        saves the data to a CSV file at the specified location. Informational or error
+        messages are logged based on the outcome.
+        """
         try:
-            fetched_prices = self.fetchers["electricity"].fetch_prices(start_date, end_date)
-
-            if len(fetched_prices) > 0:
+            df = fetch_fn(start_date, end_date)
+            if len(df) > 0:
                 filename = self.data_manager.generate_filename(
-                    "electricity_prices", start_date, end_date
+                    filename_prefix, start_date, end_date
                 )
-                output_path = self.data_manager.get_raw_path("electricity") / filename
-                fetched_prices.to_csv(output_path, index=False)
-                logger.info(f"Saved {len(fetched_prices)} electricity price records")
+                output_path = self.data_manager.get_raw_path(dataset_key) / filename
+                df.to_csv(output_path, index=False)
+                logger.info(success_msg.format(count=len(df)))
             else:
-                logger.warning("No electricity price data fetched")
-
+                logger.warning(empty_msg)
         except Exception as e:
-            logger.error(f"Failed to fetch electricity prices: {e}")
+            logger.error(f"Failed to fetch {filename_prefix.replace('_', ' ')}: {e}")
+
+        # Fetch electricity prices
+        logger.info("Fetching electricity prices...")
+        self._fetch_and_store(
+            fetch_fn=self.fetchers["electricity"].fetch_prices,
+            dataset_key="electricity",
+            filename_prefix="electricity_prices",
+            start_date=start_date,
+            end_date=end_date,
+            empty_msg="No electricity price data fetched",
+            success_msg="Saved {count} electricity price records",
+        )
 
         # Fetch electricity load
         logger.info("Fetching electricity load...")
-        try:
-            load_df = self.fetchers["electricity"].fetch_load(start_date, end_date)
-
-            if len(load_df) > 0:
-                filename = self.data_manager.generate_filename(
-                    "electricity_load", start_date, end_date
-                )
-                output_path = self.data_manager.get_raw_path("electricity") / filename
-                load_df.to_csv(output_path, index=False)
-                logger.info(f"Saved {len(load_df)} electricity load records")
-            else:
-                logger.warning("No electricity load data fetched")
-
-        except Exception as e:
-            logger.error(f"Failed to fetch electricity load: {e}")
+        self._fetch_and_store(
+            fetch_fn=self.fetchers["electricity"].fetch_load,
+            dataset_key="electricity",
+            filename_prefix="electricity_load",
+            start_date=start_date,
+            end_date=end_date,
+            empty_msg="No electricity load data fetched",
+            success_msg="Saved {count} electricity load records",
+        )
 
         # Fetch weather data
         logger.info("Fetching weather data...")
-        try:
-            weather_df = self.fetchers["weather"].fetch_weather(start_date, end_date)
-
-            if len(weather_df) > 0:
-                filename = self.data_manager.generate_filename("weather", start_date, end_date)
-                output_path = self.data_manager.get_raw_path("weather") / filename
-                weather_df.to_csv(output_path, index=False)
-                logger.info(f"Saved {len(weather_df)} weather records")
-            else:
-                logger.warning("No weather data fetched")
-
-        except Exception as e:
-            logger.error(f"Failed to fetch weather data: {e}")
+        self._fetch_and_store(
+            fetch_fn=self.fetchers["weather"].fetch_weather,
+            dataset_key="weather",
+            filename_prefix="weather",
+            start_date=start_date,
+            end_date=end_date,
+            empty_msg="No weather data fetched",
+            success_msg="Saved {count} weather records",
+        )
 
         # Fetch gas prices
         logger.info("Fetching gas prices...")
-        try:
-            gas_df = self.fetchers["gas"].fetch_prices(start_date, end_date)
-
-            if len(gas_df) > 0:
-                filename = self.data_manager.generate_filename("gas_prices", start_date, end_date)
-                output_path = self.data_manager.get_raw_path("gas") / filename
-                gas_df.to_csv(output_path, index=False)
-                logger.info(f"Saved {len(gas_df)} gas price records")
-            else:
-                logger.warning("No gas price data fetched")
-
-        except Exception as e:
-            logger.error(f"Failed to fetch gas prices: {e}")
+        self._fetch_and_store(
+            fetch_fn=self.fetchers["gas"].fetch_prices,
+            dataset_key="gas",
+            filename_prefix="gas_prices",
+            start_date=start_date,
+            end_date=end_date,
+            empty_msg="No gas price data fetched",
+            success_msg="Saved {count} gas price records",
+        )
 
         # Fetch events
         logger.info("Fetching holidays and events...")
@@ -154,8 +169,6 @@ class Pipeline:
 
         except Exception as e:
             logger.error(f"Failed to fetch events: {e}")
-
-        logger.info("=== Stage 1 complete: Data fetching ===\n")
 
     @staticmethod
     def clean_and_verify():

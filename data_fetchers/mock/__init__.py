@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def register_mock_country():
     """
-    Register mock country (XX) in the country registry.
+    Register a mock country (XX) in the country registry.
 
     This allows the mock country to be used for testing the entire
     pipeline without requiring real API credentials or data sources.
@@ -33,6 +33,7 @@ def register_mock_country():
         >>> register_mock_country()
         >>> fetchers = FetcherFactory.create_fetchers('XX')
     """
+
     CountryRegistry.register(
         "XX",
         {

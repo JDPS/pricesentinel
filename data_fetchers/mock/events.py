@@ -75,9 +75,7 @@ class MockEventProvider(EventDataProvider):
         if len(df) > 0:
             df = df.sort_values("timestamp").reset_index(drop=True)
 
-        logger.info(
-            f"Generated {len(df)} synthetic" f" holidays from {start_date} " f"to {end_date}"
-        )
+        logger.info(f"Generated {len(df)} synthetic holidays from {start_date} to {end_date}")
 
         return df
 

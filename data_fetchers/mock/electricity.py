@@ -57,7 +57,8 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
         timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
 
-        np.random.seed(42)  # For reproducibility
+        # Use a dedicated RNG for reproducibility of prices
+        rng = np.random.default_rng(42)
 
         # Base price (EUR/MWh)
         base_price = 50.0
@@ -71,11 +72,11 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         weekend_discount = np.where(day_of_week >= 5, -10, 0)
 
         # Random noise
-        noise = np.random.normal(0, 5, len(timestamps))
+        noise = rng.normal(0, 5, len(timestamps))
 
         # Occasional spikes (5% of the time)
-        spike_mask = np.random.random(len(timestamps)) < 0.05
-        spikes = np.where(spike_mask, np.random.uniform(20, 50, len(timestamps)), 0)
+        spike_mask = rng.random(len(timestamps)) < 0.05
+        spikes = np.where(spike_mask, rng.uniform(20, 50, len(timestamps)), 0)
 
         # Combine all components
         prices = base_price + daily_cycle + weekend_discount + noise + spikes
@@ -92,9 +93,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
             }
         )
 
-        logger.info(
-            f"Generated {len(df)} synthetic " f"price records from {start_date} to {end_date}"
-        )
+        logger.info(f"Generated {len(df)} synthetic price records from {start_date} to {end_date}")
 
         return df
 
@@ -113,7 +112,8 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
         timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
 
-        np.random.seed(43)  # Different seed for the load
+        # Use a dedicated RNG for reproducibility of the load
+        rng = np.random.default_rng(43)
 
         # Base load (MW)
         base_load = 5000.0
@@ -127,7 +127,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         weekend_reduction = np.where(day_of_week >= 5, -500, 0)
 
         # Random noise
-        noise = np.random.normal(0, 200, len(timestamps))
+        noise = rng.normal(0, 200, len(timestamps))
 
         # Combine all components
         load = base_load + daily_cycle + weekend_reduction + noise
@@ -138,9 +138,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
 
         df = pd.DataFrame({"timestamp": timestamps, "load_mw": load, "quality_flag": 0})
 
-        logger.info(
-            f"Generated {len(df)} synthetic load " f"records from {start_date} to {end_date}"
-        )
+        logger.info(f"Generated {len(df)} synthetic load records from {start_date} to {end_date}")
 
         return df
 
@@ -159,16 +157,17 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
         timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
 
-        np.random.seed(44)
+        # Use a dedicated RNG for reproducibility of generation
+        rng = np.random.default_rng(44)
 
         # Simplified generation mix
         df = pd.DataFrame(
             {
                 "timestamp": timestamps,
                 "solar_mw": np.maximum(0, 1000 * np.sin(2 * np.pi * timestamps.hour / 24)),
-                "wind_mw": np.abs(np.random.normal(1500, 500, len(timestamps))),
-                "hydro_mw": np.random.uniform(500, 1500, len(timestamps)),
-                "gas_mw": np.random.uniform(1000, 3000, len(timestamps)),
+                "wind_mw": np.abs(rng.normal(1500, 500, len(timestamps))),
+                "hydro_mw": rng.uniform(500, 1500, len(timestamps)),
+                "gas_mw": rng.uniform(1000, 3000, len(timestamps)),
                 "quality_flag": 0,
             }
         )

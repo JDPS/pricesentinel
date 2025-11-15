@@ -53,7 +53,8 @@ class MockGasFetcher(GasDataFetcher):
         # Create a daily timestamp range
         timestamps = pd.date_range(start=start_date, end=end_date, freq="1D", tz="UTC")
 
-        np.random.seed(46)
+        # Use a dedicated RNG for reproducibility of gas prices
+        rng = np.random.default_rng(46)
 
         # Base price (EUR/MWh)
         base_price = 30.0
@@ -64,16 +65,16 @@ class MockGasFetcher(GasDataFetcher):
         seasonal_cycle = 15 * np.cos(2 * np.pi * (day_of_year - 1) / 365)
 
         # Random walk component (prices drift over time)
-        random_walk = np.cumsum(np.random.normal(0, 1, len(timestamps)))
+        random_walk = np.cumsum(rng.normal(0, 1, len(timestamps)))
         # Normalize random walk
         random_walk = (random_walk - random_walk.mean()) * 5
 
         # Daily noise
-        daily_noise = np.random.normal(0, 2, len(timestamps))
+        daily_noise = rng.normal(0, 2, len(timestamps))
 
         # Occasional market shocks (2% of the time)
-        shock_mask = np.random.random(len(timestamps)) < 0.02
-        shocks = np.where(shock_mask, np.random.uniform(-10, 20, len(timestamps)), 0)
+        shock_mask = rng.random(len(timestamps)) < 0.02
+        shocks = np.where(shock_mask, rng.uniform(-10, 20, len(timestamps)), 0)
 
         # Combine all components
         prices = base_price + seasonal_cycle + random_walk + daily_noise + shocks
