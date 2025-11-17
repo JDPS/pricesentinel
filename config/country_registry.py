@@ -242,8 +242,8 @@ class FetcherFactory:
             logger.info(f"Created fetchers for {country_code}")
             return fetchers
 
-        except Exception as e:
-            logger.error(f"Failed to create fetchers for {country_code}: {e}")
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.error("Failed to create fetchers for %s: %s", country_code, exc)
             raise
 
 

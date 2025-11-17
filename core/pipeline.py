@@ -165,8 +165,13 @@ class Pipeline:
                 manual_events_df.to_csv(manual_path, index=False)
                 logger.info("Loaded %d manual events", len(manual_events_df))
 
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to fetch events: %s", exc)
+        except (FileNotFoundError, ValueError) as exc:
+            # Expected errors: missing files or invalid data formats.
+            logger.error("Failed to fetch events for %s: %s", self.country_code, exc)
+        except Exception:
+            # Unexpected errors should surface for debugging rather than be swallowed.
+            logger.exception("Unexpected error while fetching events for %s", self.country_code)
+            raise
 
     def _fetch_and_store(
         self,
@@ -197,8 +202,13 @@ class Pipeline:
                 logger.info(success_msg.format(count=len(df)))
             else:
                 logger.warning(empty_msg)
-        except Exception as exc:
-            logger.error(f"Failed to fetch {filename_prefix.replace('_', ' ')}: {exc}")
+        except (FileNotFoundError, ValueError) as exc:
+            logger.error("Failed to fetch %s for %s: %s", filename_prefix, self.country_code, exc)
+        except Exception:
+            logger.exception(
+                "Unexpected error while fetching %s for %s", filename_prefix, self.country_code
+            )
+            raise
 
     def _ensure_dates_set(self) -> tuple[str, str]:
         """
