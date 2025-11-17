@@ -7,13 +7,13 @@ We want PriceSentinel to be a safe, welcoming, and productive environment for an
 In the interest of fostering an open and inclusive community, we pledge to make participation a harassment‑free experience for everyone, regardless of:
 
 - age, body size, visible or invisible disability
-- ethnicity, sex characteristics, gender identity and expression
+- ethnicity, sex characteristics, gender identity, and expression
 - level of experience, education, socio‑economic status
 - nationality, personal appearance, race, religion, or sexual identity and orientation
 
 ## Our Standards
 
-Examples of behavior that contributes to creating a positive environment include:
+Examples of behaviour that contributes to creating a positive environment include:
 
 - Using welcoming and inclusive language
 - Being respectful of differing viewpoints and experiences
@@ -21,22 +21,22 @@ Examples of behavior that contributes to creating a positive environment include
 - Focusing on what is best for the community and the project
 - Showing empathy towards other community members
 
-Examples of unacceptable behavior include:
+Examples of unacceptable behaviour include:
 
-- The use of sexualized language or imagery and unwelcome sexual attention or advances
-- Trolling, insulting or derogatory comments, and personal or political attacks
+- The use of sexualised language or imagery and unwelcome sexual attention or advances
+- Trolling, insulting, or derogatory comments, and personal or political attacks
 - Public or private harassment
 - Publishing others’ private information (such as physical or email address) without explicit permission
-- Any other conduct which could reasonably be considered inappropriate in a professional setting
+- Any other conduct, which could reasonably be considered inappropriate in a professional setting
 
 ## Our Responsibilities
 
-Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
+Project maintainers are responsible for clarifying the standards of acceptable behaviour and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behaviour.
 
 Project maintainers have the right and responsibility to remove, edit, or reject:
 
 - comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct, or
-- temporarily or permanently ban any contributor for behavior that they deem inappropriate, threatening, offensive, or harmful.
+- temporarily or permanently ban any contributor for behaviour that they deem inappropriate, threatening, offensive, or harmful.
 
 ## Scope
 
@@ -49,7 +49,7 @@ This Code of Conduct applies within:
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by:
+Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported by:
 
 - opening a confidential issue (if appropriate), or
 - contacting the maintainer directly at: **joaosoarex@gmail.com**.

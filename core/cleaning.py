@@ -2,6 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+Data cleaning and verification utilities.
+
+This module contains a class for performing basic data cleaning and
+verification on sector-specific datasets. It provides functionality to
+prepare raw datasets for use in further processing and analysis. Operations
+focus on deterministic cleaning such as file filtering, timestamp adjustment,
+and duplicate removal.
+"""
+
 import logging
 
 import pandas as pd
@@ -49,7 +59,7 @@ class DataCleaner:
         if df.empty:
             return None
 
-        # Ensure timestamp is timezone-aware UTC
+        # Ensure a timestamp is timezone-aware UTC
         if df["timestamp"].dt.tz is None:
             df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
         else:

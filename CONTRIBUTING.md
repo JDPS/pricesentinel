@@ -114,7 +114,7 @@ At a high level (see docs for full details):
 1. Create `config/countries/{CODE}.yaml`.
 2. Implement fetchers under `data_fetchers/{country}/` or reuse shared ones.
 3. Register the country in `data_fetchers/__init__.py`.
-4. Add or update tests for the new fetchers and registry behavior.
+4. Add or update tests for the new fetchers and registry behaviour.
 
 ---
 

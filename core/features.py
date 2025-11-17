@@ -2,6 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+Feature engineering module for preparing data for training models.
+
+This module includes functionality for loading cleaned datasets,
+engineering features for electricity price forecasting, and training
+models using a provided trainer. Designed specifically for country-based
+datasets and supports additional exogenous features like an electricity load.
+
+Classes:
+    FeatureEngineer: Handles the feature engineering pipeline.
+"""
 
 import logging
 from collections.abc import Sequence
@@ -18,22 +29,22 @@ class FeatureEngineer:
     """
     Feature engineering for training models.
 
-    Currently focuses on electricity price forecasting with optional load
+    Currently focuses on electricity price forecasting with an optional load
     as an exogenous variable.
     """
 
     def __init__(self, country_code: str):
         self.country_code = country_code
 
+    @staticmethod
     def _load_cleaned(
-        self,
         data_manager: CountryDataManager,
         name: str,
         start_date: str,
         end_date: str,
     ) -> pd.DataFrame | None:
         """
-        Load a cleaned dataset by logical name for a date range.
+        Load a cleaned dataset by a logical name for a date range.
         """
         path = data_manager.get_processed_file_path(name, start_date, end_date)
 
@@ -120,8 +131,8 @@ class FeatureEngineer:
             len(df),
         )
 
+    @staticmethod
     def train_with_trainer(
-        self,
         trainer: BaseTrainer,
         data_manager: CountryDataManager,
         country_code: str,

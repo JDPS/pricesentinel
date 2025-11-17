@@ -2,6 +2,22 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+Utilities for machine learning trainers.
+
+This module provides a factory method for retrieving trainers used in
+machine learning tasks. Currently, it offers support for a baseline sklearn
+regressor trainer. Future enhancements may include dispatching based on
+country-specific or model-specific variations.
+
+Constants:
+DEFAULT_MODEL_NAME: str - Default model name used by the trainer.
+
+Functions:
+get_trainer: Factory method to retrieve an appropriate trainer based on
+country code and model specification.
+"""
+
 from pathlib import Path
 
 from .base import BaseTrainer

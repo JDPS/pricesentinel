@@ -2,6 +2,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+This module provides the SklearnRegressorTrainer class for building, training, and saving
+a baseline price forecasting sklearn regressor using a RandomForestRegressor model.
+
+The module integrates a structured approach to model training and evaluation by computing
+basic metrics like mean absolute error (MAE) and root mean squared error (RMSE) for training
+and validation datasets.
+
+Classes:
+    SklearnRegressorTrainer: A trainer class to handle regression tasks using sklearn's
+    RandomForestRegressor with features like model saving and metric logging.
+"""
+
 from __future__ import annotations
 
 import json

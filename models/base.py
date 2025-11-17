@@ -2,6 +2,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+A base interface for building and saving machine learning model trainers.
+
+This class serves as an abstract base for creating specific model trainer
+implementations. It defines the methods for training a model and saving
+its state and metrics. All subclasses must provide implementations for
+the `train` and `save` methods.
+
+Attributes:
+model_name: name of the model.
+models_root: directory path where models are stored.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

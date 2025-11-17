@@ -62,7 +62,8 @@ class Pipeline:
 
         logger.info(f"Initialized pipeline for {self.country_code} (run_id: {self.run_id})")
 
-    def _validate_dates(self, start_date: str, end_date: str) -> None:
+    @staticmethod
+    def _validate_dates(start_date: str, end_date: str) -> None:
         """
         Validate date strings and logical ordering.
 
@@ -71,7 +72,7 @@ class Pipeline:
             end_date: End date (YYYY-MM-DD)
 
         Raises:
-            ValueError: If format is invalid or start_date > end_date.
+            ValueError: If a format is invalid or start_date > end_date.
         """
         try:
             start_dt = date.fromisoformat(start_date)
@@ -252,7 +253,7 @@ class Pipeline:
         """
         Generate features for modelling.
 
-        Builds feature matrices from cleaned data and stores them under the
+        Builds feature matrices from cleaned data and store them under the
         processed data directory.
         """
         logger.info("=== Stage 3: Engineering features ===")

@@ -150,10 +150,10 @@ class CountryDataManager:
         self, name: str, start_date: str, end_date: str, extension: str = "csv"
     ) -> Path:
         """
-        Get full file path for a processed data file.
+        Get a full file path for a processed data file.
 
         Args:
-            name: Logical name for the processed dataset
+            name: A logical name for the processed dataset
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
             extension: File extension

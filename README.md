@@ -19,7 +19,7 @@ Multi-country energy price forecasting system with event awareness and data qual
 - **Phase 1 Complete**: Project setup and Portugal implementation
 - **Initial Cleaning & Features**: Basic cleaning and feature engineering implemented for electricity, weather, and gas
 - **Baseline Training**: End-to-end training pipeline implemented for mock country (XX) using scikit-learn
-- **Phases 2-10**: Advanced guards, forecasting, monitoring, and deployment in development
+- **Phases 2–10**: Advanced guards, forecasting, monitoring, and deployment in development
 
 ### Implemented Countries
 
@@ -82,8 +82,7 @@ python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2
 python run_pipeline.py --country PT --all --start-date 2023-01-01 --end-date 2024-12-31
 
 # Run individual stages in a single command (mock country example)
-python run_pipeline.py --country XX --fetch --clean --features --train \
-  --start-date 2024-01-01 --end-date 2024-01-07
+python run_pipeline.py --country XX --fetch --clean --features --train --start-date 2024-01-01 --end-date 2024-01-07
 
 # Get pipeline information
 python run_pipeline.py --country PT --info
@@ -241,7 +240,7 @@ This is currently a development project. Contribution guidelines will be added i
 
 ## License
 
-This project is licensed under the Apache License 2.0 – see the `LICENSE` file for details.
+This project is licensed under the Apache Licence 2.0 – see the `LICENSE` file for details.
 
 ## Contact
 

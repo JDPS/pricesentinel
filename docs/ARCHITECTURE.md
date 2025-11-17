@@ -6,7 +6,7 @@ PriceSentinel is designed with a country-agnostic core and country-specific adap
 
 ## Design Principles
 
-1. **Country Abstraction**: Core pipeline has no country-specific logic
+1. **Country Abstraction**: A core pipeline has no country-specific logic
 2. **Adapter Pattern**: Data sources implement standard interfaces
 3. **Configuration-Driven**: Country differences handled via YAML configs
 4. **Fail-Fast Validation**: Invalid configs rejected at startup
@@ -23,7 +23,7 @@ Defines interfaces that all country-specific fetchers must implement:
 - `GasDataFetcher`: Gas hub prices
 - `EventDataProvider`: Holidays and manual events
 
-All fetchers return DataFrames with standardized schemas.
+All fetchers return DataFrames with standardised schemas.
 
 ### Country Registry (`config/country_registry.py`)
 
@@ -68,12 +68,12 @@ Example: `PT_electricity_20240101_20240131.csv`
 Country-agnostic pipeline that coordinates all stages:
 
 1. **Data Fetching**: Calls appropriate fetchers
-2. **Data Cleaning**: Verification and normalization (Phase 3)
+2. **Data Cleaning**: Verification and normalisation (Phase 3)
 3. **Feature Engineering**: Generate model features (Phase 4)
 4. **Model Training**: Train forecasting models (Phase 6)
 5. **Forecast Generation**: Produce predictions (Phase 7)
 
-The pipeline never contains country-specific logic - it only calls registered adapters.
+The pipeline never contains country-specific logic — it only calls registered adapters.
 
 ### Data Fetchers
 
@@ -179,12 +179,12 @@ Pydantic models (`config/validation.py`) validate configs:
 
 ### Adding a New Data Source
 
-To add a new data source (e.g., solar forecasts):
+To add a new data source (e.g. solar forecasts):
 
 1. Create abstract interface in `core/abstractions.py`
-2. Update country configs to include new source
+2. Update country configs to include the new source
 3. Implement country-specific fetchers
-4. Update pipeline to call new fetchers
+4. Update the pipeline to call new fetchers
 
 ## Testing Strategy
 
@@ -206,11 +206,11 @@ To add a new data source (e.g., solar forecasts):
 
 ### Graceful Degradation
 - Missing data sources logged but don't crash
-- Empty DataFrames returned with correct schema
+- Empty DataFrames returned with the correct schema
 - Pipeline continues with available data
 
 ### Validation
-- Configs validated at startup (fail-fast)
+- Configs validated at the startup (fail-fast)
 - Missing API keys raise clear errors
 - Invalid dates rejected early
 
@@ -221,7 +221,7 @@ To add a new data source (e.g., solar forecasts):
 - Timezone-aware normalization
 - Missing value strategies
 
-### Phase 4-5: Features & Guards
+### Phase 4–5: Features & Guards
 - Country-specific feature plugins
 - Runtime data quality guards
 - Alert system
@@ -231,7 +231,7 @@ To add a new data source (e.g., solar forecasts):
 - Multi-horizon forecasting
 - Confidence intervals
 
-### Phase 8-10: Production
+### Phase 8–10: Production
 - Monitoring dashboards
 - Automated retraining
 - Deployment packaging
@@ -243,7 +243,7 @@ To add a new data source (e.g., solar forecasts):
 - CSV storage
 - Single-threaded pipeline
 
-### Future Optimizations
+### Future Optimisations
 - Parallel fetching for multiple countries
 - Parquet/database storage
 - Distributed processing
