@@ -15,11 +15,11 @@ Multi-country energy price forecasting system with event awareness and data qual
 
 ## Current Status
 
-- ? **Phase 0 Complete**: Architecture and abstraction layer
-- ? **Phase 1 Complete**: Project setup and Portugal implementation
-- ? **Initial Cleaning & Features**: Basic cleaning and feature engineering implemented for electricity, weather, and gas
-- ? **Baseline Training**: End-to-end training pipeline implemented for mock country (XX) using scikit-learn
-- ? **Phases 2-10**: Advanced guards, forecasting, monitoring, and deployment in development
+- **Phase 0 Complete**: Architecture and abstraction layer
+- **Phase 1 Complete**: Project setup and Portugal implementation
+- **Initial Cleaning & Features**: Basic cleaning and feature engineering implemented for electricity, weather, and gas
+- **Baseline Training**: End-to-end training pipeline implemented for mock country (XX) using scikit-learn
+- **Phases 2-10**: Advanced guards, forecasting, monitoring, and deployment in development
 
 ### Implemented Countries
 
@@ -188,12 +188,12 @@ python setup_country.py ES
 
 ## Roadmap
 
-### Phase 0 ? (Complete)
+### Phase 0 (Complete)
 - Core abstractions
 - Country registry
 - Mock country implementation
 
-### Phase 1 ? (Complete)
+### Phase 1 (Complete)
 - Project setup
 - Portugal implementation
 - CLI interface
@@ -246,7 +246,7 @@ This project is licensed under the Apache License 2.0 – see the `LICENSE` file
 ## Contact
 
 For questions or issues:
-- Technical issues: [Your Email]
+- Technical issues: joaosoarex@gmail.com
 - API access: Check respective API provider documentation
 
 ---
