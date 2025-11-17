@@ -79,7 +79,7 @@ python run_pipeline.py --country XX --all --start-date 2024-01-01 --end-date 202
 python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2024-01-31
 
 # Run full pipeline for Portugal (training assumes sufficient data and configuration)
-python run_pipeline.py --country PT --all --start-date 2023-01-01 --end-date 2024-12-31
+python run_pipeline.py --country PT --all --start-date 2024-01-01 --end-date 2024-12-31
 
 # Run individual stages in a single command (mock country example)
 python run_pipeline.py --country XX --fetch --clean --features --train --start-date 2024-01-01 --end-date 2024-01-07

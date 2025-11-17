@@ -24,7 +24,7 @@ def test(c, coverage=True, verbose=False, markers=None):
         c: Invoke context
         coverage: Enable coverage collection (default: True)
         verbose: Verbose output (default: False)
-        markers: pytest markers to filter tests (e.g., "unit", "integration")
+        markers: pytest markers to filter tests (e.g. "unit", "integration")
     """
     cmd = "uv run pytest"
 
@@ -127,7 +127,7 @@ def docs(c, serve=False, strict=False):
 @task
 def clean(c, docs=False, cache=False):
     """
-    Clean build artifacts.
+    Clean build artefacts.
 
     Args:
         c: Invoke context
@@ -199,7 +199,7 @@ def pipeline(c, country, start_date, end_date, fetch=False):
 
     Args:
         c: Invoke context
-        country: Country code (e.g., PT, XX)
+        country: Country code (e.g. PT, XX)
         start_date: Start date (YYYY-MM-DD)
         end_date: End date (YYYY-MM-DD)
         fetch: Fetch data from APIs
