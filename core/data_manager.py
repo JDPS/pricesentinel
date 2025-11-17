@@ -146,6 +146,24 @@ class CountryDataManager:
         filename = self.generate_filename(source, start_date, end_date, extension)
         return self.get_raw_path(source) / filename
 
+    def get_processed_file_path(
+        self, name: str, start_date: str, end_date: str, extension: str = "csv"
+    ) -> Path:
+        """
+        Get full file path for a processed data file.
+
+        Args:
+            name: Logical name for the processed dataset
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            extension: File extension
+
+        Returns:
+            Full path to the processed file
+        """
+        filename = self.generate_filename(name, start_date, end_date, extension)
+        return self.get_processed_path() / filename
+
     def get_latest_file(self, source: str, pattern: str = "*") -> Path | None:
         """
         Find the most recent file for a given source.

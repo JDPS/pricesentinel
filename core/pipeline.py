@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-4
 Country-agnostic pipelines orchestration.
 
 This module provides the main Pipeline class that orchestrates all stages
@@ -11,10 +10,13 @@ of the forecasting workflow while remaining completely country-agnostic.
 """
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 from config.country_registry import ConfigLoader, FetcherFactory
+from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
+from core.features import FeatureEngineer
+from models import DEFAULT_MODEL_NAME, get_trainer
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +51,40 @@ class Pipeline:
         self.config = ConfigLoader.load_country_config(self.country_code)
         self.fetchers = FetcherFactory.create_fetchers(self.country_code)
         self.data_manager = CountryDataManager(self.country_code)
+        self.cleaner = DataCleaner(self.data_manager, self.country_code)
+        self.feature_engineer = FeatureEngineer(self.country_code)
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._last_start_date: str | None = None
+        self._last_end_date: str | None = None
 
         # Ensure directories exist
         self.data_manager.create_directories()
 
         logger.info(f"Initialized pipeline for {self.country_code} (run_id: {self.run_id})")
 
-    def fetch_data(self, start_date: str, end_date: str):
+    def _validate_dates(self, start_date: str, end_date: str) -> None:
+        """
+        Validate date strings and logical ordering.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+
+        Raises:
+            ValueError: If format is invalid or start_date > end_date.
+        """
+        try:
+            start_dt = date.fromisoformat(start_date)
+            end_dt = date.fromisoformat(end_date)
+        except ValueError as exc:
+            raise ValueError(
+                "Invalid date format. Expected YYYY-MM-DD for start_date and end_date"
+            ) from exc
+
+        if start_dt > end_dt:
+            raise ValueError("start_date must be before or equal to end_date")
+
+    def fetch_data(self, start_date: str, end_date: str) -> None:
         """
         Fetch all required data sources.
 
@@ -64,43 +92,12 @@ class Pipeline:
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
         """
+        self._validate_dates(start_date, end_date)
+        self._last_start_date = start_date
+        self._last_end_date = end_date
+
         logger.info(f"=== Stage 1: Fetching data for {self.country_code} ===")
         logger.info(f"Date range: {start_date} to {end_date}")
-
-        # Fetch electricity prices
-        logger.info("Fetching electricity prices...")
-
-    def _fetch_and_store(
-        self,
-        fetch_fn,
-        dataset_key: str,
-        filename_prefix: str,
-        start_date: str,
-        end_date: str,
-        empty_msg: str,
-        success_msg: str,
-    ) -> None:
-        """
-        Fetches data using the specified fetch function and stores it in a file.
-
-        This method uses the provided fetch function to retrieve data between the given
-        start and end dates. If data is retrieved successfully and is not empty, it
-        saves the data to a CSV file at the specified location. Informational or error
-        messages are logged based on the outcome.
-        """
-        try:
-            df = fetch_fn(start_date, end_date)
-            if len(df) > 0:
-                filename = self.data_manager.generate_filename(
-                    filename_prefix, start_date, end_date
-                )
-                output_path = self.data_manager.get_raw_path(dataset_key) / filename
-                df.to_csv(output_path, index=False)
-                logger.info(success_msg.format(count=len(df)))
-            else:
-                logger.warning(empty_msg)
-        except Exception as e:
-            logger.error(f"Failed to fetch {filename_prefix.replace('_', ' ')}: {e}")
 
         # Fetch electricity prices
         logger.info("Fetching electricity prices...")
@@ -158,50 +155,137 @@ class Pipeline:
             if len(holidays_df) > 0:
                 holidays_path = self.data_manager.get_events_path() / "holidays.csv"
                 holidays_df.to_csv(holidays_path, index=False)
-                logger.info(f"Saved {len(holidays_df)} holidays")
+                logger.info("Saved %d holidays", len(holidays_df))
             else:
                 logger.info("No holidays in date range")
 
-            # Manual events
             manual_events_df = self.fetchers["events"].get_manual_events()
             if len(manual_events_df) > 0:
-                logger.info(f"Loaded {len(manual_events_df)} manual events")
+                manual_path = self.data_manager.get_events_path() / "manual_events.csv"
+                manual_events_df.to_csv(manual_path, index=False)
+                logger.info("Loaded %d manual events", len(manual_events_df))
 
-        except Exception as e:
-            logger.error(f"Failed to fetch events: {e}")
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Failed to fetch events: %s", exc)
 
-    @staticmethod
-    def clean_and_verify():
+    def _fetch_and_store(
+        self,
+        fetch_fn,
+        dataset_key: str,
+        filename_prefix: str,
+        start_date: str,
+        end_date: str,
+        empty_msg: str,
+        success_msg: str,
+    ) -> None:
+        """
+        Fetches data using the specified fetch function and stores it in a file.
+
+        This method uses the provided fetch function to retrieve data between the given
+        start and end dates. If data is retrieved successfully and is not empty, it
+        saves the data to a CSV file at the specified location. Informational or error
+        messages are logged based on the outcome.
+        """
+        try:
+            df = fetch_fn(start_date, end_date)
+            if len(df) > 0:
+                filename = self.data_manager.generate_filename(
+                    filename_prefix, start_date, end_date
+                )
+                output_path = self.data_manager.get_raw_path(dataset_key) / filename
+                df.to_csv(output_path, index=False)
+                logger.info(success_msg.format(count=len(df)))
+            else:
+                logger.warning(empty_msg)
+        except Exception as exc:
+            logger.error(f"Failed to fetch {filename_prefix.replace('_', ' ')}: {exc}")
+
+    def _ensure_dates_set(self) -> tuple[str, str]:
+        """
+        Ensure that start and end dates are known for downstream stages.
+
+        Returns:
+            Tuple with (start_date, end_date).
+
+        Raises:
+            ValueError: If dates have not been set by fetch_data.
+        """
+        if not self._last_start_date or not self._last_end_date:
+            raise ValueError(
+                "Date range not set. Call fetch_data(start_date, end_date) first "
+                "or provide dates explicitly to each stage."
+            )
+        return self._last_start_date, self._last_end_date
+
+    def clean_and_verify(self, start_date: str | None = None, end_date: str | None = None) -> None:
         """
         Clean and verify data quality.
 
-        To be implemented in Phase 3.
+        Currently focuses on electricity, weather, gas, and events for the
+        specified date range.
         """
         logger.info("=== Stage 2: Cleaning and verifying data ===")
-        logger.warning("Data cleaning not yet implemented (Phase 3)")
-        logger.info("=== Stage 2 skipped ===\n")
 
-    @staticmethod
-    def engineer_features():
+        if start_date is None or end_date is None:
+            start_date, end_date = self._ensure_dates_set()
+
+        self._validate_dates(start_date, end_date)
+
+        self.cleaner.clean_electricity(start_date, end_date)
+        self.cleaner.clean_weather(start_date, end_date)
+        self.cleaner.clean_gas(start_date, end_date)
+        self.cleaner.clean_events(start_date, end_date)
+
+        logger.info("=== Stage 2 complete ===\n")
+
+    def engineer_features(self, start_date: str | None = None, end_date: str | None = None) -> None:
         """
         Generate features for modelling.
 
-        To be implemented in Phase 4.
+        Builds feature matrices from cleaned data and stores them under the
+        processed data directory.
         """
         logger.info("=== Stage 3: Engineering features ===")
-        logger.warning("Feature engineering not yet implemented (Phase 4)")
-        logger.info("=== Stage 3 skipped ===\n")
 
-    @staticmethod
-    def train_model():
+        if start_date is None or end_date is None:
+            start_date, end_date = self._ensure_dates_set()
+
+        self._validate_dates(start_date, end_date)
+
+        self.feature_engineer.build_electricity_features(self.data_manager, start_date, end_date)
+
+        logger.info("=== Stage 3 complete ===\n")
+
+    def train_model(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> None:
         """
         Train forecasting model.
 
-        To be implemented in Phase 6.
+        Uses engineered features to fit a baseline model and saves the
+        trained artefact and basic metrics.
         """
         logger.info("=== Stage 4: Training model ===")
-        logger.warning("Model training not yet implemented (Phase 6)")
-        logger.info("=== Stage 4 skipped ===\n")
+
+        if start_date is None or end_date is None:
+            start_date, end_date = self._ensure_dates_set()
+
+        self._validate_dates(start_date, end_date)
+
+        trainer = get_trainer(self.country_code, model_name=model_name)
+        self.feature_engineer.train_with_trainer(
+            trainer=trainer,
+            data_manager=self.data_manager,
+            country_code=self.country_code,
+            run_id=self.run_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        logger.info("=== Stage 4 complete ===\n")
 
     @staticmethod
     def generate_forecast(forecast_date: str | None = None):
@@ -240,13 +324,13 @@ class Pipeline:
             self.fetch_data(start_date, end_date)
 
             # Stage 2: Clean and verify
-            self.clean_and_verify()
+            self.clean_and_verify(start_date, end_date)
 
             # Stage 3: Engineer features
-            self.engineer_features()
+            self.engineer_features(start_date, end_date)
 
             # Stage 4: Train model
-            self.train_model()
+            self.train_model(start_date, end_date)
 
             # Stage 5: Generate forecast
             self.generate_forecast(forecast_date)

@@ -1,3 +1,5 @@
+![Coverage](coverage.svg)
+
 # PriceSentinel: Event-Aware Energy Price Forecasting
 
 Multi-country energy price forecasting system with event awareness and data quality guards.
@@ -6,20 +8,23 @@ Multi-country energy price forecasting system with event awareness and data qual
 
 - **Multi-country support**: Extensible architecture for any country/market
 - **Event-aware forecasting**: Incorporates holidays, DST transitions, and manual events
-- **Data quality guards**: Runtime validation and anomaly handling
-- **Comprehensive monitoring**: Track data quality, model performance, and alerts
+- **Data quality guards**: Cleaning and basic validation for electricity, weather, and gas data
+- **Feature engineering & training**: Baseline feature set and model training (scikit-learn) for mock country
+- **Comprehensive monitoring**: Planned monitoring of data quality, model performance, and alerts
 - **Country abstraction**: Add new countries with minimal code changes
 
 ## Current Status
 
-- ✅ **Phase 0 Complete**: Architecture and abstraction layer
-- ✅ **Phase 1 Complete**: Project setup and Portugal implementation
-- ⏳ **Phases 2–10**: In development
+- ? **Phase 0 Complete**: Architecture and abstraction layer
+- ? **Phase 1 Complete**: Project setup and Portugal implementation
+- ? **Initial Cleaning & Features**: Basic cleaning and feature engineering implemented for electricity, weather, and gas
+- ? **Baseline Training**: End-to-end training pipeline implemented for mock country (XX) using scikit-learn
+- ? **Phases 2-10**: Advanced guards, forecasting, monitoring, and deployment in development
 
 ### Implemented Countries
 
 - **Portugal (PT)**: Full implementation with ENTSO-E, Open-Meteo, and TTF data
-- **Mock Country (XX)**: Synthetic data for testing
+- **Mock Country (XX)**: Synthetic data for testing and fast training demos
 
 ## Quick Start
 
@@ -30,17 +35,19 @@ Multi-country energy price forecasting system with event awareness and data qual
 git clone https://github.com/JDPS/pricesentinel.git
 cd pricesentinel
 
-# Create virtual environment
-python -m venv venv
+# Create and activate a virtual environment (example with venv)
+python -m venv .venv
 
-# Activate virtual environment
 # Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 # Linux/Mac:
-source venv/bin/activate
+source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install runtime dependencies
+pip install .
+
+# (Optional) Install development extras (tests, linting, docs)
+pip install ".[dev,test,docs]"
 
 # Configure environment
 copy .env.example .env
@@ -50,62 +57,78 @@ copy .env.example .env
 ### Configuration
 
 1. Add your ENTSO-E API key to `.env`:
-   ```
+   ```bash
    ENTSOE_API_KEY=your_key_here
    ```
 
-2. (Optional) Download TTF gas prices and place in `data/manual_imports/ttf_gas_prices.csv`
+2. (Optional) Download TTF gas prices and place in:
+   ```text
+   data/manual_imports/ttf_gas_prices.csv
+   ```
 
 ### Basic Usage
 
 ```bash
-# Test with mock country (no API keys required)
-python run_pipeline.py --country XX --fetch --start-date 2024-01-01 --end-date 2024-01-31
+# Test with mock country (no API keys required) – fetch only
+python run_pipeline.py --country XX --fetch --start-date 2024-01-01 --end-date 2024-01-07
+
+# Run full pipeline for mock country (fetch → clean → features → train)
+python run_pipeline.py --country XX --all --start-date 2024-01-01 --end-date 2024-01-07
 
 # Fetch data for Portugal
 python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2024-01-31
 
+# Run full pipeline for Portugal (training assumes sufficient data and configuration)
+python run_pipeline.py --country PT --all --start-date 2023-01-01 --end-date 2024-12-31
+
+# Run individual stages in a single command (mock country example)
+python run_pipeline.py --country XX --fetch --clean --features --train \
+  --start-date 2024-01-01 --end-date 2024-01-07
+
 # Get pipeline information
 python run_pipeline.py --country PT --info
-
-# Run full pipeline (when all phases are implemented)
-python run_pipeline.py --country PT --all --start-date 2023-01-01 --end-date 2024-12-31
 ```
 
 ## Project Structure
 
-```
+```text
 pricesentinel/
-├── config/                  # Configuration files
-│   ├── countries/           # Country-specific configs
-│   │   ├── PT.yaml          # Portugal configuration
-│   │   └── XX.yaml          # Mock country configuration
-│   ├── country_registry.py  # Country registry and factory
-│   └── validation.py        # Pydantic validation schemas
-│
-├── core/                    # Core pipeline logic
-│   ├── abstractions.py      # Abstract base classes
-│   ├── data_manager.py      # Data directory management
-│   ├── logging_config.py    # Logging setup
-│   └── pipeline.py          # Main pipeline orchestration
-│
-├── data_fetchers/           # Data source adapters
-│   ├── mock/                # Mock country (synthetic data)
-│   ├── portugal/            # Portugal-specific fetchers
-│   └── shared/              # Reusable fetchers
-│
-├── data/                    # Data storage (gitignored)
-│   ├── PT/                  # Portugal data
-│   └── XX/                  # Mock country data
-│
-├── tests/                   # Test suite
-│   ├── test_abstractions.py
-│   ├── test_registry.py
-│   └── test_mock_country.py
-│
-├── run_pipeline.py          # Main CLI entry point
-├── setup_country.py         # Country setup utility
-└── requirements.txt         # Python dependencies
+  config/                  # Configuration files
+    countries/             # Country-specific configs
+      PT.yaml              # Portugal configuration
+      XX.yaml              # Mock country configuration
+    country_registry.py    # Country registry and factory
+    validation.py          # Pydantic validation schemas
+
+  core/                    # Core pipeline logic
+    abstractions.py        # Abstract base classes
+    data_manager.py        # Data directory management
+    logging_config.py      # Logging setup
+    cleaning.py            # Data cleaning and verification
+    features.py            # Feature engineering
+    pipeline.py            # Main pipeline orchestration
+
+  data_fetchers/           # Data source adapters
+    mock/                  # Mock country (synthetic data)
+    portugal/              # Portugal-specific fetchers
+    shared/                # Reusable fetchers (Open-Meteo, TTF)
+
+  models/                  # Model trainers and saved artefacts
+
+  data/                    # Data storage (gitignored)
+    PT/                    # Portugal data
+    XX/                    # Mock country data
+
+  tests/                   # Test suite
+    test_abstractions.py
+    test_registry.py
+    test_mock_country.py
+    test_pipeline_mock_training.py
+
+  run_pipeline.py          # Main CLI entry point
+  setup_country.py         # Country setup utility
+  tasks.py                 # Invoke-based automation
+  pyproject.toml           # Project and dependency metadata
 ```
 
 ## Architecture
@@ -119,14 +142,17 @@ PriceSentinel uses an adapter pattern to remain country-agnostic while supportin
 
 ### Adding a New Country
 
-See [docs/COUNTRY_EXTENSION_GUIDE.md](dev_ws/RevisedPhase0_and_Phase1.md#country-extension-guide) for detailed instructions.
+See `dev_ws/RevisedPhase0_and_Phase1.md` (country extension guide) for detailed instructions.
 
 Quick summary:
 
 1. Create `config/countries/{CODE}.yaml`
 2. Implement country-specific fetchers (if needed)
 3. Register in `data_fetchers/__init__.py`
-4. Test with `python run_pipeline.py --country {CODE} --info`
+4. Test with:
+   ```bash
+   python run_pipeline.py --country {CODE} --info
+   ```
 
 ## Development
 
@@ -136,15 +162,11 @@ Quick summary:
 # Run all tests
 pytest
 
-# Run with coverage
-pytest --cov=. --cov-report=html
-
-# Run specific test file
-pytest tests/test_registry.py
-
-# Run with verbose output
-pytest -v
+# Run with coverage (HTML and terminal)
+pytest --cov=. --cov-report=html --cov-report=term-missing
 ```
+
+The coverage badge at the top of this README (`coverage.svg`) can be regenerated from the coverage tools.
 
 ### Setting Up a New Country
 
@@ -159,54 +181,55 @@ python setup_country.py ES
 
 ## Documentation
 
-- **Architecture Overview**: See `dev_ws/RevisedPhase0_and_Phase1.md`
-- **Detailed Work Plan**: See `dev_ws/RevisedPhases2-10_CountryAbstraction.md`
-- **Original Assessment**: See `dev_ws/DetailedWorkPlan.md`
+- **Architecture Overview**: `docs/ARCHITECTURE.md`
+- **Implementation Phases 0–1**: `.dev_ws/RevisedPhase0_and_Phase1.md`
+- **Extended Roadmap Phases 2–10**: `.dev_ws/RevisedPhases2-10_CountryAbstraction.md`
+- **Consolidated Assessment & Refactoring Plan**: `.dev_ws/CONSOLIDATED_ASSESSMENT.md`
 
 ## Roadmap
 
-### Phase 0 ✅ (Complete)
+### Phase 0 ? (Complete)
 - Core abstractions
 - Country registry
 - Mock country implementation
 
-### Phase 1 ✅ (Complete)
+### Phase 1 ? (Complete)
 - Project setup
 - Portugal implementation
 - CLI interface
-- Tests
+- Initial tests
 
-### Phase 2–3 (Next)
-- Data verification and cleaning
+### Phase 2–3 (In progress)
+- Data verification and cleaning (basic cleaning implemented for electricity, weather, gas)
 - Timestamp normalization
-- Quality checks
+- Advanced quality checks and guards
 
-### Phase 4-5
-- Feature engineering
-- Runtime guards
+### Phase 4–5
+- Feature engineering (initial lags and calendar features implemented)
+- Runtime guards and additional feature plugins
 
-### Phase 6-7
-- Model training
-- Inference engine
+### Phase 6–7
+- Model training (baseline scikit-learn regressor implemented for mock country)
+- Inference engine and production-ready model registry
 
-### Phase 8-10
+### Phase 8–10
 - Reporting and monitoring
-- Testing
-- Deployment
+- Extended testing and QA
+- Packaging and deployment
 
 ## Requirements
 
-- Python 3.10+
-- See `requirements.txt` for dependencies
+- Python 3.13+
+- See `pyproject.toml` for dependencies and optional extras
 
 ### External APIs
 
 - **ENTSO-E Transparency Platform** (for EU electricity data)
-  - Register at: https://transparency.entsoe.eu/
+  - Register at: <https://transparency.entsoe.eu/>
   - Free API key required
 
 - **Open-Meteo** (for weather data)
-  - Free tier: https://open-meteo.com/
+  - Free tier: <https://open-meteo.com/>
   - No API key required
 
 - **TTF Gas Prices** (manual download for MVP)
@@ -218,7 +241,7 @@ This is currently a development project. Contribution guidelines will be added i
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 – see the `LICENSE` file for details.
 
 ## Contact
 
@@ -228,5 +251,5 @@ For questions or issues:
 
 ---
 
-**Note**: This project is in active development. Many features are planned but not yet implemented.
+**Note**: This project is in active development. Many features are planned but not yet fully implemented.
 See the roadmap above for current status.

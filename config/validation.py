@@ -205,7 +205,7 @@ def generate_config_template(country_code: str, country_name: str) -> dict:
         "gas": {"api_type": "ttf", "hub_name": "TTF", "currency": "EUR"},
         "events": {
             "holiday_library": country_code.lower(),
-            "manual_events_path": f"data/ {country_code.upper()}/events/manual_events.csv",
+            "manual_events_path": f"data/{country_code.upper()}/events/manual_events.csv",
             "persistence_required": 1,
         },
         "features": {

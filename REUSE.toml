@@ -50,6 +50,13 @@ SPDX-FileCopyrightText = "2025 Soares"
 SPDX-License-Identifier = "Apache-2.0"
 precedence = "aggregate"
 
+# Model artefacts (binary)
+[[annotations]]
+path = ["models/**/*.pkl", "tests/models/**/*.pkl"]
+SPDX-FileCopyrightText = "2025 Soares"
+SPDX-License-Identifier = "Apache-2.0"
+precedence = "aggregate"
+
 # SVG files
 [[annotations]]
 path = ["coverage.svg"]
