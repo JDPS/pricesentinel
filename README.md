@@ -193,6 +193,17 @@ python setup_country.py ES
 - **Extended Roadmap Phases 2-10**: `.dev_ws/RevisedPhases2-10_CountryAbstraction.md`
 - **Consolidated Assessment & Refactoring Plan**: `.dev_ws/CONSOLIDATED_ASSESSMENT.md`
 
+### Run & Forecast Inspection
+
+For quick health checks of a trained run and its forecasts, you can use:
+
+```bash
+uv run python inspect_run.py --country XX --model-name baseline
+```
+
+This prints metrics from `metrics.json` and basic stats for any forecast CSVs
+under `data/{country}/processed/forecasts/` for the given model.
+
 ## Roadmap
 
 ### Phase 0 (Complete)

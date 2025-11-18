@@ -29,6 +29,8 @@ def _make_args(**overrides):
         "start_date": "2024-01-01",
         "end_date": "2024-01-07",
         "forecast_date": "2024-01-08",
+        "forecast_start_date": None,
+        "forecast_end_date": None,
         "log_level": "INFO",
         "model_name": "baseline",
         "fast_train": False,
@@ -143,6 +145,41 @@ def test_pipeline_cli_fast_train_adjusts_model_name(tmp_path, monkeypatch):
 
     assert ("init", "XX") in calls
     assert ("run_full", "2024-01-01", "2024-01-07", "2024-01-08", "baseline_fast") in calls
+
+
+def test_pipeline_cli_forecast_range_uses_generate_forecast_range(tmp_path, monkeypatch):
+    """CLI forecast range flags should call generate_forecast_range on the pipeline."""
+    CountryRegistry.clear()
+    register_mock_country()
+    monkeypatch.chdir(tmp_path)
+
+    args = _make_args(
+        all=False,
+        fetch=False,
+        clean=False,
+        features=False,
+        train=False,
+        forecast=True,
+        forecast_start_date="2024-01-01",
+        forecast_end_date="2024-01-03",
+    )
+    cli = PipelineCLI(args)
+
+    calls = []
+
+    class DummyPipeline(Pipeline):  # type: ignore[misc]
+        def __init__(self, country_code: str):  # noqa: D401
+            calls.append(("init", country_code))
+
+        def generate_forecast_range(self, start_date, end_date, model_name="baseline"):
+            calls.append(("range", start_date, end_date, model_name))
+
+    monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
+
+    cli.run()
+
+    assert ("init", "XX") in calls
+    assert ("range", "2024-01-01", "2024-01-03", "baseline") in calls
 
 
 def test_setup_country_main_smoke(monkeypatch, tmp_path, capsys):

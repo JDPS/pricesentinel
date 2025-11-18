@@ -443,6 +443,27 @@ class Pipeline:
         )
         logger.info("=== Stage 5 complete ===\n")
 
+    def generate_forecast_range(
+        self,
+        start_date: str,
+        end_date: str,
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> None:
+        """
+        Generate forecasts for a range of calendar dates.
+
+        This is a thin wrapper that iterates over dates and calls
+        generate_forecast() for each one.
+        """
+        self._validate_dates(start_date, end_date)
+
+        current = date.fromisoformat(start_date)
+        end_dt = date.fromisoformat(end_date)
+
+        while current <= end_dt:
+            self.generate_forecast(current.isoformat(), model_name=model_name)
+            current = current.fromordinal(current.toordinal() + 1)
+
     def run_full_pipeline(
         self,
         start_date: str,

@@ -93,6 +93,16 @@ Examples:
     parser.add_argument(
         "--forecast-date", type=str, help="Forecast date (YYYY-MM-DD), defaults to today"
     )
+    parser.add_argument(
+        "--forecast-start-date",
+        type=str,
+        help="Start date for forecast range (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--forecast-end-date",
+        type=str,
+        help="End date for forecast range (YYYY-MM-DD)",
+    )
 
     # Logging
     parser.add_argument(
@@ -151,6 +161,30 @@ def validate_arguments(args):
         except ValueError:
             print("Error: Dates must be in YYYY-MM-DD format.")
             return False
+
+    # Check forecast date / range requirements for forecast-only runs
+    if args.forecast and not args.all:
+        has_single = bool(args.forecast_date)
+        has_range = bool(args.forecast_start_date and args.forecast_end_date)
+
+        if not (has_single or has_range):
+            print(
+                "Error: Provide either --forecast-date or "
+                "--forecast-start-date and --forecast-end-date for forecasting."
+            )
+            return False
+
+        if has_range:
+            try:
+                start_dt = datetime.strptime(args.forecast_start_date, "%Y-%m-%d")
+                end_dt = datetime.strptime(args.forecast_end_date, "%Y-%m-%d")
+            except ValueError:
+                print("Error: Forecast dates must be in YYYY-MM-DD format.")
+                return False
+
+            if start_dt > end_dt:
+                print("Error: --forecast-start-date must be <= --forecast-end-date.")
+                return False
 
     return True
 
@@ -249,7 +283,15 @@ class PipelineCLI:
             self.pipeline.train_model(model_name=model_name)
 
         if self.args.forecast:
-            self.pipeline.generate_forecast(self.args.forecast_date, model_name=model_name)
+            # Use range if provided, otherwise single forecast date
+            if self.args.forecast_start_date and self.args.forecast_end_date:
+                self.pipeline.generate_forecast_range(
+                    self.args.forecast_start_date,
+                    self.args.forecast_end_date,
+                    model_name=model_name,
+                )
+            else:
+                self.pipeline.generate_forecast(self.args.forecast_date, model_name=model_name)
 
     def run(self):
         self.setup_logging()
