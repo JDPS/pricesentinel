@@ -52,7 +52,9 @@ class Pipeline:
         self.fetchers = FetcherFactory.create_fetchers(self.country_code)
         self.data_manager = CountryDataManager(self.country_code)
         self.cleaner = DataCleaner(self.data_manager, self.country_code)
-        self.feature_engineer = FeatureEngineer(self.country_code)
+        self.feature_engineer = FeatureEngineer(
+            self.country_code, features_config=self.config.features_config
+        )
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._last_start_date: str | None = None
         self._last_end_date: str | None = None
@@ -315,7 +317,13 @@ class Pipeline:
         logger.warning("Forecast generation not yet implemented (Phase 7)")
         logger.info("=== Stage 5 skipped ===\n")
 
-    def run_full_pipeline(self, start_date: str, end_date: str, forecast_date: str | None = None):
+    def run_full_pipeline(
+        self,
+        start_date: str,
+        end_date: str,
+        forecast_date: str | None = None,
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> None:
         """
         Run the complete pipeline from data fetching to forecasting.
 
@@ -341,7 +349,7 @@ class Pipeline:
             self.engineer_features(start_date, end_date)
 
             # Stage 4: Train model
-            self.train_model(start_date, end_date)
+            self.train_model(start_date, end_date, model_name=model_name)
 
             # Stage 5: Generate forecast
             self.generate_forecast(forecast_date)

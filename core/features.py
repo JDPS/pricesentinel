@@ -33,8 +33,21 @@ class FeatureEngineer:
     as an exogenous variable.
     """
 
-    def __init__(self, country_code: str):
+    def __init__(self, country_code: str, features_config: dict | None = None):
         self.country_code = country_code
+        # Raw dict from CountryConfig.features_config; use simple boolean flags.
+        self._features_config = features_config or {}
+
+    def _is_enabled(self, flag: str, default: bool = True) -> bool:
+        """
+        Check if a feature flag is enabled in the configuration.
+
+        Args:
+            flag: Name of the flag in the features config dict
+            default: Default value when the flag is not explicitly set
+        """
+        value = self._features_config.get(flag, default)
+        return bool(value)
 
     @staticmethod
     def _load_cleaned(
@@ -118,6 +131,70 @@ class FeatureEngineer:
             )
             return
 
+        # Optional weather features (aggregated by timestamp)
+        if self._is_enabled("use_weather_features", True):
+            weather_df = self._load_cleaned(data_manager, "weather_clean", start_date, end_date)
+            if weather_df is not None:
+                weather_agg = (
+                    weather_df.groupby("timestamp")
+                    .agg(
+                        temperature_c=("temperature_c", "mean"),
+                        wind_speed_ms=("wind_speed_ms", "mean"),
+                        solar_radiation_wm2=("solar_radiation_wm2", "mean"),
+                        precipitation_mm=("precipitation_mm", "sum"),
+                    )
+                    .reset_index()
+                )
+                df = df.merge(weather_agg, on="timestamp", how="left")
+
+        # Optional gas price feature (daily, joined by date)
+        if self._is_enabled("use_gas_features", True):
+            gas_df = self._load_cleaned(data_manager, "gas_prices_clean", start_date, end_date)
+            if gas_df is not None and "price_eur_mwh" in gas_df.columns:
+                gas_df = gas_df.copy()
+                gas_df["date"] = gas_df["timestamp"].dt.normalize()
+                gas_daily = (
+                    gas_df.sort_values("timestamp")
+                    .drop_duplicates(subset=["date"], keep="last")[["date", "price_eur_mwh"]]
+                    .rename(columns={"price_eur_mwh": "gas_price_eur_mwh"})
+                )
+                df["date"] = df["timestamp"].dt.normalize()
+                df = df.merge(gas_daily, on="date", how="left")
+
+        # Holiday and manual event flags (always present; data usage is configurable)
+        df["is_holiday"] = 0
+        df["is_event"] = 0
+
+        if self._is_enabled("use_event_features", True):
+            holidays_df = self._load_cleaned(data_manager, "holidays_clean", start_date, end_date)
+            if holidays_df is not None:
+                holidays_df = holidays_df.copy()
+                holidays_df["date"] = holidays_df["timestamp"].dt.normalize()
+                holiday_dates = set(holidays_df["date"])
+                df_dates = df["timestamp"].dt.normalize()
+                df.loc[df_dates.isin(holiday_dates), "is_holiday"] = 1
+
+            manual_events_path = data_manager.get_processed_file_path(
+                "manual_events_clean", start_date, end_date
+            )
+            if manual_events_path.exists():
+                events_df = pd.read_csv(manual_events_path, parse_dates=["date_start", "date_end"])
+
+                if not events_df.empty:
+                    for _, row in events_df.iterrows():
+                        mask = (df["timestamp"] >= row["date_start"]) & (
+                            df["timestamp"] <= row["date_end"]
+                        )
+                        df.loc[mask, "is_event"] = 1
+
+        # Ensure boolean flags are numeric for model training
+        df["is_holiday"] = df["is_holiday"].astype("int8")
+        df["is_event"] = df["is_event"].astype("int8")
+
+        # Drop helper column if created
+        if "date" in df.columns:
+            df = df.drop(columns=["date"])
+
         features_path = data_manager.get_processed_file_path(
             "electricity_features", start_date, end_date
         )
@@ -169,6 +246,9 @@ class FeatureEngineer:
         x = df[feature_cols].select_dtypes(include="number")
         y = df[target_col]
 
+        if x.empty or x.shape[1] == 0:
+            raise ValueError("No numeric feature columns available for training")
+
         n_samples = len(df)
         if n_samples < 10:
             split_idx = max(1, n_samples // 2)
@@ -179,6 +259,15 @@ class FeatureEngineer:
         y_train = y.iloc[:split_idx]
         x_val = x.iloc[split_idx:]
         y_val = y.iloc[split_idx:]
+
+        logger.info(
+            "Training %s: %d samples, %d features (train=%d, val=%d)",
+            country_code,
+            n_samples,
+            x.shape[1],
+            len(x_train),
+            len(x_val),
+        )
 
         metrics = trainer.train(x_train, y_train, x_val, y_val)
         trainer.save(country_code, run_id, metrics=metrics)

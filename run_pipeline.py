@@ -78,6 +78,13 @@ Examples:
 
     parser.add_argument("--info", action="store_true", help="Show pipeline and data information")
 
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="baseline",
+        help="Model name to use for training (default: baseline)",
+    )
+
     # Date arguments
     parser.add_argument("--start-date", type=str, help="Start date (YYYY-MM-DD)")
 
@@ -94,6 +101,20 @@ Examples:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
         help="Logging level (default: INFO)",
+    )
+
+    # Model configuration
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="baseline",
+        help="Model name to use for training (default: baseline)",
+    )
+
+    parser.add_argument(
+        "--fast-train",
+        action="store_true",
+        help="Use fast training mode (e.g., smaller model or shorter run)",
     )
 
     return parser.parse_args()
@@ -209,9 +230,17 @@ class PipelineCLI:
         if self.pipeline is None:
             raise RuntimeError("Pipeline not initialized")
 
+        # Determine effective model name, incorporating fast-train flag if set
+        model_name = self.args.model_name
+        if getattr(self.args, "fast_train", False) and not model_name.endswith("_fast"):
+            model_name = f"{model_name}_fast"
+
         if self.args.all:
             self.pipeline.run_full_pipeline(
-                self.args.start_date, self.args.end_date, self.args.forecast_date
+                self.args.start_date,
+                self.args.end_date,
+                self.args.forecast_date,
+                model_name=model_name,
             )
             return
 
@@ -225,7 +254,7 @@ class PipelineCLI:
             self.pipeline.engineer_features()
 
         if self.args.train:
-            self.pipeline.train_model()
+            self.pipeline.train_model(model_name=model_name)
 
         if self.args.forecast:
             self.pipeline.generate_forecast(self.args.forecast_date)

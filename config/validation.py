@@ -97,6 +97,9 @@ class FeaturesConfig(BaseModel):
     use_cross_border_flows: bool = Field(False, description="Include cross-border flow features")
     neighbors: list[str] = Field([], description="Neighboring countries for cross-border features")
     custom_feature_plugins: list[str] = Field([], description="Custom feature plugin names")
+    use_weather_features: bool = Field(True, description="Include weather-derived features")
+    use_gas_features: bool = Field(True, description="Include gas price features")
+    use_event_features: bool = Field(True, description="Include holiday and event flags")
 
 
 class CountryConfigSchema(BaseModel):

@@ -39,9 +39,14 @@ class SklearnRegressorTrainer(BaseTrainer):
 
     def __init__(self, model_name: str = "baseline", models_root: str | Path = "models"):
         super().__init__(model_name=model_name, models_root=models_root)
+        # Lightweight "fast" mode for quick demo runs
+        fast_mode = model_name.endswith("_fast")
+        n_estimators = 50 if fast_mode else 100
+        max_depth = 5 if fast_mode else 10
+
         self.model = RandomForestRegressor(
-            n_estimators=100,
-            max_depth=10,
+            n_estimators=n_estimators,
+            max_depth=max_depth,
             random_state=42,
             n_jobs=-1,
         )

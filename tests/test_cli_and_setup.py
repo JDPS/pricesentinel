@@ -30,6 +30,8 @@ def _make_args(**overrides):
         "end_date": "2024-01-07",
         "forecast_date": "2024-01-08",
         "log_level": "INFO",
+        "model_name": "baseline",
+        "fast_train": False,
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -86,15 +88,41 @@ def test_pipeline_cli_runs_all_stages_for_mock_country(tmp_path, monkeypatch):
             # Skip parent initialisation; just record initialisation
             calls.append(("init", country_code))
 
-        def run_full_pipeline(self, start_date, end_date, forecast_date):
-            calls.append(("run_full", start_date, end_date, forecast_date))
+        def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
+            calls.append(("run_full", start_date, end_date, forecast_date, model_name))
 
     monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
 
     cli.run()
 
     assert ("init", "XX") in calls
-    assert ("run_full", "2024-01-01", "2024-01-07", "2024-01-08") in calls
+    assert ("run_full", "2024-01-01", "2024-01-07", "2024-01-08", "baseline") in calls
+
+
+def test_pipeline_cli_fast_train_adjusts_model_name(tmp_path, monkeypatch):
+    """Fast-train flag should propagate a modified model name into the pipeline."""
+    CountryRegistry.clear()
+    register_mock_country()
+    monkeypatch.chdir(tmp_path)
+
+    args = _make_args(all=True, fast_train=True, model_name="baseline")
+    cli = PipelineCLI(args)
+
+    calls = []
+
+    class DummyPipeline(Pipeline):  # type: ignore[misc]
+        def __init__(self, country_code: str):  # noqa: D401
+            calls.append(("init", country_code))
+
+        def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
+            calls.append(("run_full", start_date, end_date, forecast_date, model_name))
+
+    monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
+
+    cli.run()
+
+    assert ("init", "XX") in calls
+    assert ("run_full", "2024-01-01", "2024-01-07", "2024-01-08", "baseline_fast") in calls
 
 
 def test_setup_country_main_smoke(monkeypatch, tmp_path, capsys):
