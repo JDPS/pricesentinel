@@ -30,3 +30,6 @@ features:
   use_cross_border_flows: false
   neighbors: []
   custom_feature_plugins: []
+  use_weather_features: true
+  use_gas_features: true
+  use_event_features: true

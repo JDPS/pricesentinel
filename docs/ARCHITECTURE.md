@@ -139,13 +139,20 @@ weather:
 gas:
   api_type: ttf
   hub_name: TTF
+  currency: EUR
 
 events:
   holiday_library: portugal
   manual_events_path: data/PT/events/manual_events.csv
+  persistence_required: 1
 
 features:
   use_cross_border_flows: false
+  neighbors: []
+  custom_feature_plugins: []
+  use_weather_features: true
+  use_gas_features: true
+  use_event_features: true
 ```
 
 ### Validation

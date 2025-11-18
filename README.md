@@ -86,6 +86,12 @@ python run_pipeline.py --country XX --fetch --clean --features --train --start-d
 
 # Get pipeline information
 python run_pipeline.py --country PT --info
+
+# Use an alternative model name
+python run_pipeline.py --country XX --all --model-name my_experiment --start-date 2024-01-01 --end-date 2024-01-07
+
+# Use fast training mode (smaller model, quick demo)
+python run_pipeline.py --country XX --all --fast-train --start-date 2024-01-01 --end-date 2024-01-07
 ```
 
 ## Project Structure
@@ -181,8 +187,10 @@ python setup_country.py ES
 ## Documentation
 
 - **Architecture Overview**: `docs/ARCHITECTURE.md`
-- **Implementation Phases 0–1**: `.dev_ws/RevisedPhase0_and_Phase1.md`
-- **Extended Roadmap Phases 2–10**: `.dev_ws/RevisedPhases2-10_CountryAbstraction.md`
+- **Training & Features**: `docs/TRAINING.md`
+- **Feature Toggles (YAML)**: `docs/FEATURE_TOGGLES.md`
+- **Implementation Phases 0-1**: `.dev_ws/RevisedPhase0_and_Phase1.md`
+- **Extended Roadmap Phases 2-10**: `.dev_ws/RevisedPhases2-10_CountryAbstraction.md`
 - **Consolidated Assessment & Refactoring Plan**: `.dev_ws/CONSOLIDATED_ASSESSMENT.md`
 
 ## Roadmap
