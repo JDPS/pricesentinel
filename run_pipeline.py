@@ -103,14 +103,6 @@ Examples:
         help="Logging level (default: INFO)",
     )
 
-    # Model configuration
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default="baseline",
-        help="Model name to use for training (default: baseline)",
-    )
-
     parser.add_argument(
         "--fast-train",
         action="store_true",
@@ -257,7 +249,7 @@ class PipelineCLI:
             self.pipeline.train_model(model_name=model_name)
 
         if self.args.forecast:
-            self.pipeline.generate_forecast(self.args.forecast_date)
+            self.pipeline.generate_forecast(self.args.forecast_date, model_name=model_name)
 
     def run(self):
         self.setup_logging()

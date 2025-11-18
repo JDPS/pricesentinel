@@ -10,7 +10,11 @@ of the forecasting workflow while remaining completely country-agnostic.
 """
 
 import logging
+import pickle
 from datetime import date, datetime
+from pathlib import Path
+
+import pandas as pd
 
 from config.country_registry import ConfigLoader, FetcherFactory
 from core.cleaning import DataCleaner
@@ -300,22 +304,144 @@ class Pipeline:
 
         logger.info("=== Stage 4 complete ===\n")
 
-    @staticmethod
-    def generate_forecast(forecast_date: str | None = None):
+    def generate_forecast(
+        self, forecast_date: str | None = None, model_name: str = DEFAULT_MODEL_NAME
+    ) -> None:
         """
-        Generate price forecasts.
+        Generates electricity price forecasts for a specified date using a pre-trained model
+        and engineered features.
 
-        To be implemented in Phase 7.
+        Forecast generation involves locating the latest set of processed feature files,
+         applying a trained model to produce
+        predictions, and saving the results into a structured output file. If no suitable
+         features or model are found, the process will be skipped.
 
-        Args:
-            forecast_date: Date to forecast (YYYY-MM-DD), defaults today
+        Parameters:
+            forecast_date: str | None
+                The specific date for which forecasts need to be generated.
+                 Defaults to the current date if not provided.
+            model_name: str
+                Name of the model to be used for predictions.
+                 Defaults to the global DEFAULT_MODEL_NAME constant.
+
+        Raises:
+            ValueError
+                If required inputs or dependencies are incorrectly configured or missing.
         """
         forecast_date = forecast_date or datetime.now().strftime("%Y-%m-%d")
 
         logger.info("=== Stage 5: Generating forecast ===")
-        logger.info(f"Forecast date: {forecast_date}")
-        logger.warning("Forecast generation not yet implemented (Phase 7)")
-        logger.info("=== Stage 5 skipped ===\n")
+        logger.info("Forecast date: %s", forecast_date)
+
+        # Find latest engineered feature file for this country
+        processed_dir = self.data_manager.get_processed_path()
+        pattern = f"{self.country_code}_electricity_features_*.csv"
+        feature_files = sorted(
+            processed_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True
+        )
+
+        if not feature_files:
+            logger.warning(
+                "No electricity_features files found for %s under %s; skipping forecast",
+                self.country_code,
+                processed_dir,
+            )
+            logger.info("=== Stage 5 skipped ===\n")
+            return
+
+        features_path = feature_files[0]
+        logger.info("Using features file for forecast: %s", features_path)
+
+        df = pd.read_csv(features_path, parse_dates=["timestamp"])
+        if df.empty:
+            logger.warning("Features file %s is empty; skipping forecast", features_path)
+            logger.info("=== Stage 5 skipped ===\n")
+            return
+
+        # Build prediction matrix (numeric features only, excluding target)
+        target_col = "target_price"
+        feature_cols = [c for c in df.columns if c not in ("timestamp", target_col)]
+        x = df[feature_cols].select_dtypes(include="number")
+
+        if x.empty or x.shape[1] == 0:
+            logger.warning("No numeric feature columns available for forecast; skipping")
+            logger.info("=== Stage 5 skipped ===\n")
+            return
+
+        # Locate trained model
+        models_root = Path("models")
+        model_dir = models_root / self.country_code / model_name / self.run_id
+        model_path = model_dir / "model.pkl"
+
+        if not model_path.exists():
+            logger.warning(
+                "Model for run_id %s not found at %s; attempting to use most recent model",
+                self.run_id,
+                model_path,
+            )
+            # Fallback: newest model.pkl under models/{country}/{model_name}
+            candidate_root = models_root / self.country_code / model_name
+            candidate_models = (
+                list(candidate_root.glob("*/model.pkl")) if candidate_root.exists() else []
+            )
+            if not candidate_models:
+                logger.warning(
+                    "No trained models found for %s/%s; cannot generate forecast",
+                    self.country_code,
+                    model_name,
+                )
+                logger.info("=== Stage 5 skipped ===\n")
+                return
+            candidate_models.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            model_path = candidate_models[0]
+            logger.info("Using latest available model for forecast: %s", model_path)
+
+        with open(model_path, "rb") as f:
+            # Model files are produced by this application; do not load untrusted artefacts.
+            model = pickle.load(f)  # noqa: S301
+
+        # Predict next-hour prices; align forecast timestamp as t+1h
+        preds = model.predict(x)
+        forecast_timestamp = df["timestamp"] + pd.Timedelta(hours=1)
+
+        forecast_df = pd.DataFrame(
+            {
+                "forecast_timestamp": forecast_timestamp,
+                "forecast_price_eur_mwh": preds,
+                "source_features_file": features_path.name,
+                "model_name": model_name,
+                "run_id": self.run_id,
+            }
+        )
+
+        # Filter by requested forecast date
+        # Interpret forecast_date as a simple calendar date (no timezone semantics needed)
+        forecast_date_dt = date.fromisoformat(forecast_date)
+        mask = forecast_df["forecast_timestamp"].dt.date == forecast_date_dt
+        filtered = forecast_df.loc[mask].copy()
+
+        if filtered.empty:
+            logger.warning(
+                "No forecast rows for date %s in features file %s; writing empty forecast file",
+                forecast_date,
+                features_path.name,
+            )
+
+        forecasts_dir = self.data_manager.get_processed_path() / "forecasts"
+        forecasts_dir.mkdir(parents=True, exist_ok=True)
+        out_name = (
+            f"{self.country_code}_forecast_{forecast_date_dt.strftime('%Y%m%d')}_{model_name}.csv"
+        )
+        out_path = forecasts_dir / out_name
+        filtered.to_csv(out_path, index=False)
+
+        logger.info(
+            "Saved %d forecast rows for %s to %s",
+            len(filtered),
+            self.country_code,
+            out_path,
+        )
+        logger.info("=== Stage 5 complete ===\n")
 
     def run_full_pipeline(
         self,
@@ -331,6 +457,8 @@ class Pipeline:
             start_date: Historical data start date (YYYY-MM-DD)
             end_date: Historical data end date (YYYY-MM-DD)
             forecast_date: Date to forecast (YYYY-MM-DD), defaults today
+            model_name: Name of the model to be used for predictions,
+             defaults to DEFAULT_MODEL_NAME
         """
         logger.info(f"\n{'='*70}")
         logger.info(f"STARTING FULL PIPELINE FOR {self.country_code}")

@@ -1,4 +1,10 @@
-"""Tests for FeatureEngineer feature building and training helpers."""
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Tests for FeatureEngineer feature building and training helpers.
+"""
 
 from pathlib import Path
 
@@ -38,6 +44,21 @@ class DummyTrainer(BaseTrainer):
     ) -> None:
         self.saved = True
         self.saved_with = (country_code, run_id, metrics or {})
+
+
+class BadMetricsTrainer(DummyTrainer):
+    """Trainer that reports very poor metrics, used to exercise guardrails."""
+
+    def train(
+        self,
+        x_train: pd.DataFrame,
+        y_train: pd.Series,
+        x_val: pd.DataFrame | None = None,
+        y_val: pd.Series | None = None,
+    ) -> dict[str, float]:
+        self.last_train_args = (x_train, y_train, x_val, y_val)
+        # Deliberately large errors
+        return {"train_mae": 5000.0, "train_rmse": 6000.0}
 
 
 def _make_manager(tmp_path: Path) -> CountryDataManager:
@@ -340,3 +361,40 @@ def test_train_with_trainer_no_numeric_features_raises(tmp_path, monkeypatch):
             start_date=start_date,
             end_date=end_date,
         )
+
+
+def test_train_with_trainer_guardrail_can_skip_save(tmp_path, monkeypatch):
+    """Guardrail should allow skipping model save when metrics are clearly bad."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PRICESENTINEL_SKIP_SAVE_ON_BAD_METRICS", "1")
+    manager = _make_manager(tmp_path)
+
+    start_date = "2024-01-01"
+    end_date = "2024-01-02"
+
+    # Minimal valid features file with numeric columns
+    timestamps = pd.date_range("2024-01-01", "2024-01-02 23:00", freq="1h", tz="UTC")
+    df = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "feature1": [1.0] * len(timestamps),
+            "target_price": list(range(len(timestamps))),
+        }
+    )
+    features_path = manager.get_processed_file_path("electricity_features", start_date, end_date)
+    features_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(features_path, index=False)
+
+    trainer = BadMetricsTrainer(models_root=tmp_path / "models")
+
+    FeatureEngineer.train_with_trainer(
+        trainer=trainer,
+        data_manager=manager,
+        country_code="XX",
+        run_id="run123",
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    # With the guardrail env var set and bad metrics, save should be skipped
+    assert trainer.saved is False

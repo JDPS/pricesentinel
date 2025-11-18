@@ -15,6 +15,7 @@ Classes:
 """
 
 import logging
+import os
 from collections.abc import Sequence
 
 import pandas as pd
@@ -270,7 +271,40 @@ class FeatureEngineer:
         )
 
         metrics = trainer.train(x_train, y_train, x_val, y_val)
-        trainer.save(country_code, run_id, metrics=metrics)
+
+        # A simple guardrail for obviously bad metrics
+        train_mae = metrics.get("train_mae")
+        train_rmse = metrics.get("train_rmse")
+        bad_metrics = False
+
+        if isinstance(train_mae, int | float) and train_mae > 1000:
+            logger.warning(
+                "High train MAE detected for %s (%.3f) – check data and feature config",
+                country_code,
+                train_mae,
+            )
+            bad_metrics = True
+
+        if isinstance(train_rmse, int | float) and train_rmse > 1000:
+            logger.warning(
+                "High train RMSE detected for %s (%.3f) – check data and feature config",
+                country_code,
+                train_rmse,
+            )
+            bad_metrics = True
+
+        skip_save_env = os.getenv("PRICESENTINEL_SKIP_SAVE_ON_BAD_METRICS", "0")
+        skip_save = bad_metrics and skip_save_env == "1"
+
+        if skip_save:
+            logger.warning(
+                "Skipping model save for %s (run_id=%s) due to poor metrics "
+                "and PRICESENTINEL_SKIP_SAVE_ON_BAD_METRICS=1",
+                country_code,
+                run_id,
+            )
+        else:
+            trainer.save(country_code, run_id, metrics=metrics)
 
         logger.info(
             "Training complete for %s (%d samples). Metrics: %s",

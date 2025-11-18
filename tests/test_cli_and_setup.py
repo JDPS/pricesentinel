@@ -100,7 +100,22 @@ def test_pipeline_cli_runs_all_stages_for_mock_country(tmp_path, monkeypatch):
 
 
 def test_pipeline_cli_fast_train_adjusts_model_name(tmp_path, monkeypatch):
-    """Fast-train flag should propagate a modified model name into the pipeline."""
+    """
+    Tests the behaviour of the CLI for pipeline execution when using the fast training option,
+    ensuring that the model name is adjusted correctly.
+
+    Attributes:
+        None
+
+    Raises:
+        AssertionError: Raised if the test case fails due to
+        missing or misbehaving pipeline execution.
+
+    Parameters:
+        tmp_path (Path): Temporary path object used as test-specific directory.
+        monkeypatch (pytest.MonkeyPatch): Pytest fixture to modify or mock runtime behaviour.
+
+    """
     CountryRegistry.clear()
     register_mock_country()
     monkeypatch.chdir(tmp_path)
@@ -111,7 +126,12 @@ def test_pipeline_cli_fast_train_adjusts_model_name(tmp_path, monkeypatch):
     calls = []
 
     class DummyPipeline(Pipeline):  # type: ignore[misc]
+        """
+        Dummy Pipeline for testing.
+        """
+
         def __init__(self, country_code: str):  # noqa: D401
+            super().__init__(country_code)
             calls.append(("init", country_code))
 
         def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
