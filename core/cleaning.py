@@ -42,7 +42,15 @@ class DataCleaner:
         end_date: str,
     ) -> pd.DataFrame | None:
         """
-        Load the latest raw file for a given source and filename prefix.
+        Load and merge all raw files for a source/prefix over a date range.
+
+        This method scans all raw CSV files whose name matches the given
+        prefix (e.g. ``*_{filename_prefix}_*.csv``), concatenates them,
+        normalises timestamps to UTC, filters by the requested window, and
+        removes duplicate timestamps.
+
+        It is intentionally simple and deterministic rather than optimised
+        for very large numbers of files.
         """
         pattern = f"*_{filename_prefix}_*.csv"
         files = self.data_manager.list_files(source, pattern=pattern)
@@ -51,19 +59,32 @@ class DataCleaner:
             logger.info("No raw files found for source=%s, prefix=%s", source, filename_prefix)
             return None
 
-        path = files[0]
-        logger.info("Using raw file for %s/%s: %s", source, filename_prefix, path)
+        # Read and concatenate all matching files. list_files() returns newest
+        # first; order does not matter once we sort by timestamp.
+        frames: list[pd.DataFrame] = []
+        for path in files:
+            logger.info("Loading raw file for %s/%s: %s", source, filename_prefix, path)
+            df = pd.read_csv(path, parse_dates=["timestamp"])
+            if df.empty:
+                continue
 
-        df = pd.read_csv(path, parse_dates=["timestamp"])
+            # Ensure timestamp is timezone-aware UTC
+            if df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+            else:
+                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
 
-        if df.empty:
+            frames.append(df)
+
+        if not frames:
+            logger.info(
+                "All raw files for source=%s, prefix=%s are empty after loading",
+                source,
+                filename_prefix,
+            )
             return None
 
-        # Ensure a timestamp is timezone-aware UTC
-        if df["timestamp"].dt.tz is None:
-            df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
-        else:
-            df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
+        df = pd.concat(frames, ignore_index=True)
 
         start = pd.to_datetime(start_date, utc=True)
         end = pd.to_datetime(end_date, utc=True)

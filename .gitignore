@@ -80,3 +80,4 @@ Thumbs.db
 .claude/
 dev_ws/
 /.dev_ws/
+/train_protocol.md

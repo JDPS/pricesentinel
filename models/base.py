@@ -39,7 +39,7 @@ class BaseTrainer(ABC):
         y_train: pd.Series,
         x_val: pd.DataFrame | None = None,
         y_val: pd.Series | None = None,
-    ) -> dict[str, float]:
+    ) -> dict[str, float | str]:
         """
         Train the model and return evaluation metrics.
         """
@@ -49,7 +49,7 @@ class BaseTrainer(ABC):
         self,
         country_code: str,
         run_id: str,
-        metrics: dict[str, float] | None = None,
+        metrics: dict[str, float | str] | None = None,
     ) -> None:
         """
         Persist the trained model (and optionally metrics) to disk.

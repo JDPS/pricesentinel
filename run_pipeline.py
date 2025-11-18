@@ -261,6 +261,10 @@ class PipelineCLI:
         if getattr(self.args, "fast_train", False) and not model_name.endswith("_fast"):
             model_name = f"{model_name}_fast"
 
+        # Date range (may be None; pipeline methods fall back to last fetched range)
+        start_date = self.args.start_date
+        end_date = self.args.end_date
+
         if self.args.all:
             self.pipeline.run_full_pipeline(
                 self.args.start_date,
@@ -271,16 +275,16 @@ class PipelineCLI:
             return
 
         if self.args.fetch:
-            self.pipeline.fetch_data(self.args.start_date, self.args.end_date)
+            self.pipeline.fetch_data(start_date, end_date)
 
         if self.args.clean:
-            self.pipeline.clean_and_verify()
+            self.pipeline.clean_and_verify(start_date, end_date)
 
         if self.args.features:
-            self.pipeline.engineer_features()
+            self.pipeline.engineer_features(start_date, end_date)
 
         if self.args.train:
-            self.pipeline.train_model(model_name=model_name)
+            self.pipeline.train_model(start_date, end_date, model_name=model_name)
 
         if self.args.forecast:
             # Use range if provided, otherwise single forecast date

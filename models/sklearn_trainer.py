@@ -50,7 +50,7 @@ class SklearnRegressorTrainer(BaseTrainer):
             random_state=42,
             n_jobs=-1,
         )
-        self.metrics: dict[str, float] = {}
+        self.metrics: dict[str, float | str] = {}
 
     def train(
         self,
@@ -58,14 +58,14 @@ class SklearnRegressorTrainer(BaseTrainer):
         y_train: pd.Series,
         x_val: pd.DataFrame | None = None,
         y_val: pd.Series | None = None,
-    ) -> dict[str, float]:
+    ) -> dict[str, float | str]:
         """
         Train the underlying sklearn model and compute basic metrics.
         """
         logger.info("Training sklearn regressor (%s) on %d samples", self.model_name, len(x_train))
         self.model.fit(x_train, y_train)
 
-        metrics: dict[str, float] = {}
+        metrics: dict[str, float | str] = {}
 
         # Training metrics
         y_pred_train = self.model.predict(x_train)
@@ -89,7 +89,7 @@ class SklearnRegressorTrainer(BaseTrainer):
         self,
         country_code: str,
         run_id: str,
-        metrics: dict[str, float] | None = None,
+        metrics: dict[str, float | str] | None = None,
     ) -> None:
         """
         Save the trained model and metrics under the models directory.

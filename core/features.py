@@ -271,6 +271,9 @@ class FeatureEngineer:
         )
 
         metrics = trainer.train(x_train, y_train, x_val, y_val)
+        # Record the training data window for easier benchmarking/comparison.
+        metrics["train_start_date"] = start_date
+        metrics["train_end_date"] = end_date
 
         # A simple guardrail for obviously bad metrics
         train_mae = metrics.get("train_mae")
