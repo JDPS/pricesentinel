@@ -2,6 +2,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""
+End-to-end testing of the training pipeline for a mock country.
+
+This module provides functionality to test the full training pipeline for
+a mock country, including fetching data, cleaning and verifying, engineering
+features, and training the model. It ensures that all intermediate and final
+steps are executed successfully and produce the expected artefacts.
+
+Functions:
+- mock_pipeline: Pytest fixture that initialises and tears down a mock pipeline.
+- test_full_training_flow_mock_country: Test function for the end-to-end training flow.
+
+"""
+
 import pytest
 
 from config.country_registry import CountryRegistry

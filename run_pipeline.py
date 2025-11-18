@@ -21,6 +21,8 @@ Usage:
     python run_pipeline.py --country PT --info
 """  # noqa: E501
 
+from __future__ import annotations
+
 import argparse
 import sys
 from datetime import datetime
@@ -140,106 +142,134 @@ def validate_arguments(args):
     return True
 
 
+class PipelineCLI:
+    """CLI runner for the PriceSentinel pipeline."""
+
+    def __init__(self, args):
+        import logging
+
+        self.args = args
+        # Initialise logger immediately to avoid Optional type issues
+        self.logger: logging.Logger = logging.getLogger(__name__)
+        # Pipeline is initialised later in init_pipeline
+        self.pipeline: Pipeline | None = None
+
+    def setup_logging(self):
+        setup_logging(level=self.args.log_level)
+
+    @staticmethod
+    def print_header():
+        print("\n" + "=" * 70)
+        print("PriceSentinel: Event-Aware Energy Price Forecasting")
+        print("=" * 70 + "\n")
+
+    def register_countries(self) -> list[str]:
+        self.logger.info("Registering countries...")
+        auto_register_countries()
+        available_countries = CountryRegistry.list_countries()
+        self.logger.info(f"Available countries: {', '.join(available_countries)}")
+        return available_countries
+
+    def validate_country(self, available_countries: list[str]) -> None:
+        if self.args.country.upper() not in available_countries:
+            self.logger.error(
+                f"Country '{self.args.country}' not registered.\n"
+                f"Available countries: {available_countries}"
+            )
+            sys.exit(1)
+
+    def init_pipeline(self) -> None:
+        self.logger.info(f"Initializing pipeline for {self.args.country}...")
+        self.pipeline = Pipeline(country_code=self.args.country)
+
+    def show_info_and_exit(self) -> None:
+        if self.pipeline is None:
+            raise RuntimeError("Pipeline not initialized")
+
+        info = self.pipeline.get_info()
+        print("\n" + "=" * 70)
+        print(f"PIPELINE INFORMATION: {info['country_code']}")
+        print("=" * 70)
+        print(f"Country: {info['country_name']}")
+        print(f"Timezone: {info['timezone']}")
+        print(f"Run ID: {info['run_id']}")
+        print(f"Data directory: {info['data_directory']}")
+        print("\nData info:")
+        for key, value in info["data_info"].items():
+            if key != "sources":
+                print(f"  {key}: {value}")
+        if "sources" in info["data_info"]:
+            print("  Sources:")
+            for source, count in info["data_info"]["sources"].items():
+                print(f"    - {source}: {count} files")
+        print("=" * 70 + "\n")
+        sys.exit(0)
+
+    def run_stages(self) -> None:
+        if self.pipeline is None:
+            raise RuntimeError("Pipeline not initialized")
+
+        if self.args.all:
+            self.pipeline.run_full_pipeline(
+                self.args.start_date, self.args.end_date, self.args.forecast_date
+            )
+            return
+
+        if self.args.fetch:
+            self.pipeline.fetch_data(self.args.start_date, self.args.end_date)
+
+        if self.args.clean:
+            self.pipeline.clean_and_verify()
+
+        if self.args.features:
+            self.pipeline.engineer_features()
+
+        if self.args.train:
+            self.pipeline.train_model()
+
+        if self.args.forecast:
+            self.pipeline.generate_forecast(self.args.forecast_date)
+
+    def run(self):
+        self.setup_logging()
+        self.print_header()
+        available_countries = self.register_countries()
+        self.validate_country(available_countries)
+
+        try:
+            self.init_pipeline()
+
+            if self.args.info:
+                self.show_info_and_exit()
+
+            self.run_stages()
+
+            print("\n" + "=" * 70)
+            print(f"[OK] Pipeline completed successfully for {self.args.country}")
+            print("=" * 70 + "\n")
+
+        except KeyboardInterrupt:
+            self.logger.warning("\n\nPipeline interrupted by user")
+            sys.exit(1)
+
+        except Exception as e:
+            self.logger.error(f"\n\nPipeline failed: {e}", exc_info=True)
+            print("\n" + "=" * 70)
+            print(f"[FAIL] Pipeline failed for {self.args.country}")
+            print(f"Error: {e}")
+            print("=" * 70 + "\n")
+            sys.exit(1)
+
+
 def main():
     """Main entry point for the CLI."""
     args = parse_arguments()
 
-    # Validate arguments
     if not validate_arguments(args):
         sys.exit(1)
 
-    # Setup logging
-    setup_logging(level=args.log_level)
-
-    # Import logger after setup
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    # Print header
-    print("\n" + "=" * 70)
-    print("PriceSentinel: Event-Aware Energy Price Forecasting")
-    print("=" * 70 + "\n")
-
-    # Auto-register all countries
-    logger.info("Registering countries...")
-    auto_register_countries()
-
-    # List available countries
-    available_countries = CountryRegistry.list_countries()
-    logger.info(f"Available countries: {', '.join(available_countries)}")
-
-    # Validate country code
-    if args.country.upper() not in available_countries:
-        logger.error(
-            f"Country '{args.country}' not registered.\n"
-            f"Available countries: {available_countries}"
-        )
-        sys.exit(1)
-
-    try:
-        # Initialize pipeline
-        logger.info(f"Initializing pipeline for {args.country}...")
-        pipeline = Pipeline(country_code=args.country)
-
-        # Show info if requested
-        if args.info:
-            info = pipeline.get_info()
-            print("\n" + "=" * 70)
-            print(f"PIPELINE INFORMATION: {info['country_code']}")
-            print("=" * 70)
-            print(f"Country: {info['country_name']}")
-            print(f"Timezone: {info['timezone']}")
-            print(f"Run ID: {info['run_id']}")
-            print(f"Data directory: {info['data_directory']}")
-            print("\nData info:")
-            for key, value in info["data_info"].items():
-                if key != "sources":
-                    print(f"  {key}: {value}")
-            if "sources" in info["data_info"]:
-                print("  Sources:")
-                for source, count in info["data_info"]["sources"].items():
-                    print(f"    - {source}: {count} files")
-            print("=" * 70 + "\n")
-            sys.exit(0)
-
-        # Run pipeline stages
-        if args.all:
-            # Run full pipeline
-            pipeline.run_full_pipeline(args.start_date, args.end_date, args.forecast_date)
-
-        else:
-            # Run individual stages
-            if args.fetch:
-                pipeline.fetch_data(args.start_date, args.end_date)
-
-            if args.clean:
-                pipeline.clean_and_verify()
-
-            if args.features:
-                pipeline.engineer_features()
-
-            if args.train:
-                pipeline.train_model()
-
-            if args.forecast:
-                pipeline.generate_forecast(args.forecast_date)
-
-        print("\n" + "=" * 70)
-        print(f"[OK] Pipeline completed successfully for {args.country}")
-        print("=" * 70 + "\n")
-
-    except KeyboardInterrupt:
-        logger.warning("\n\nPipeline interrupted by user")
-        sys.exit(1)
-
-    except Exception as e:
-        logger.error(f"\n\nPipeline failed: {e}", exc_info=True)
-        print("\n" + "=" * 70)
-        print(f"[FAIL] Pipeline failed for {args.country}")
-        print(f"Error: {e}")
-        print("=" * 70 + "\n")
-        sys.exit(1)
+    cli = PipelineCLI(args)
+    cli.run()
 
 
 if __name__ == "__main__":

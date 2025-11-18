@@ -185,13 +185,17 @@ class CountryDataManager:
 
         files = sorted(raw_path.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
 
-        if not files:
+        # Exclude repository bookkeeping files such as .gitkeep
+        data_files = [f for f in files if f.name != ".gitkeep"]
+
+        if not data_files:
             raise FileNotFoundError(
                 f"No files found for source '{source}' matching pattern '{pattern}'"
             )
 
-        logger.debug(f"Found latest file for {source}: {files[0].name}")
-        return files[0]
+        latest = data_files[0]
+        logger.debug(f"Found latest file for {source}: {latest.name}")
+        return latest
 
     def list_files(self, source: str, pattern: str = "*") -> list:
         """

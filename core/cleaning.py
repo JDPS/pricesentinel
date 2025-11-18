@@ -168,54 +168,60 @@ class DataCleaner:
         # Holidays
         holidays_path = events_path / "holidays.csv"
         if holidays_path.exists():
-            holidays_df = pd.read_csv(holidays_path, parse_dates=["timestamp"])
-
-            if not holidays_df.empty:
-                if holidays_df["timestamp"].dt.tz is None:
-                    holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_localize("UTC")
-                else:
-                    holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_convert("UTC")
-
-                start = pd.to_datetime(start_date, utc=True)
-                end = pd.to_datetime(end_date, utc=True)
-
-                mask = (holidays_df["timestamp"] >= start) & (holidays_df["timestamp"] <= end)
-                holidays_df = holidays_df.loc[mask].copy()
-
-                if not holidays_df.empty:
-                    out_path = self.data_manager.get_processed_file_path(
-                        "holidays_clean", start_date, end_date
-                    )
-                    out_path.parent.mkdir(parents=True, exist_ok=True)
-                    holidays_df.sort_values("timestamp").to_csv(out_path, index=False)
-                    logger.info("Saved cleaned holidays to %s", out_path)
+            self.holidays_events(holidays_path, start_date, end_date)
         else:
             logger.info("No holidays file found at %s", holidays_path)
 
         # Manual events
         manual_path = events_path / "manual_events.csv"
         if manual_path.exists():
-            events_df = pd.read_csv(manual_path, parse_dates=["date_start", "date_end"])
-
-            if not events_df.empty:
-                for col in ["date_start", "date_end"]:
-                    if events_df[col].dt.tz is None:
-                        events_df[col] = events_df[col].dt.tz_localize("UTC")
-                    else:
-                        events_df[col] = events_df[col].dt.tz_convert("UTC")
-
-                start = pd.to_datetime(start_date, utc=True)
-                end = pd.to_datetime(end_date, utc=True)
-
-                mask = (events_df["date_end"] >= start) & (events_df["date_start"] <= end)
-                events_df = events_df.loc[mask].copy()
-
-                if not events_df.empty:
-                    out_path = self.data_manager.get_processed_file_path(
-                        "manual_events_clean", start_date, end_date
-                    )
-                    out_path.parent.mkdir(parents=True, exist_ok=True)
-                    events_df.to_csv(out_path, index=False)
-                    logger.info("Saved cleaned manual events to %s", out_path)
+            self.manual_events(manual_path, start_date, end_date)
         else:
             logger.info("No manual events file found at %s", manual_path)
+
+    def holidays_events(self, holidays_path, start_date, end_date):
+        holidays_df = pd.read_csv(holidays_path, parse_dates=["timestamp"])
+
+        if not holidays_df.empty:
+            if holidays_df["timestamp"].dt.tz is None:
+                holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_localize("UTC")
+            else:
+                holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_convert("UTC")
+
+            start = pd.to_datetime(start_date, utc=True)
+            end = pd.to_datetime(end_date, utc=True)
+
+            mask = (holidays_df["timestamp"] >= start) & (holidays_df["timestamp"] <= end)
+            holidays_df = holidays_df.loc[mask].copy()
+
+            if not holidays_df.empty:
+                out_path = self.data_manager.get_processed_file_path(
+                    "holidays_clean", start_date, end_date
+                )
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                holidays_df.sort_values("timestamp").to_csv(out_path, index=False)
+                logger.info("Saved cleaned holidays to %s", out_path)
+
+    def manual_events(self, manual_path, start_date, end_date):
+        events_df = pd.read_csv(manual_path, parse_dates=["date_start", "date_end"])
+
+        if not events_df.empty:
+            for col in ["date_start", "date_end"]:
+                if events_df[col].dt.tz is None:
+                    events_df[col] = events_df[col].dt.tz_localize("UTC")
+                else:
+                    events_df[col] = events_df[col].dt.tz_convert("UTC")
+
+            start = pd.to_datetime(start_date, utc=True)
+            end = pd.to_datetime(end_date, utc=True)
+
+            mask = (events_df["date_end"] >= start) & (events_df["date_start"] <= end)
+            events_df = events_df.loc[mask].copy()
+
+            if not events_df.empty:
+                out_path = self.data_manager.get_processed_file_path(
+                    "manual_events_clean", start_date, end_date
+                )
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                events_df.to_csv(out_path, index=False)
+                logger.info("Saved cleaned manual events to %s", out_path)

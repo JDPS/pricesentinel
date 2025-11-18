@@ -77,7 +77,7 @@ This is the fastest way to check that your changes did not break the core pipeli
 Using `invoke` tasks (see `tasks.py`):
 
 ```bash
-# Run tests with coverage
+# Run tests with coverage_enable
 uv run invoke test
 
 # Run linting and type checking

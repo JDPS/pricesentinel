@@ -11,7 +11,7 @@ ensuring all required fields are present and have valid values.
 
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
 class CoordinateConfig(BaseModel):
@@ -30,7 +30,8 @@ class ElectricityConfig(BaseModel):
     market_type: str = Field("day_ahead", description="Market type")
 
     @field_validator("api_type")
-    def validate_api_type(self, v):
+    @classmethod
+    def validate_api_type(cls, v: str) -> str:
         """Validate API type is recognised."""
         allowed = ["entsoe", "eia", "elexon", "aemo", "custom"]
         if v not in allowed:
@@ -38,9 +39,11 @@ class ElectricityConfig(BaseModel):
         return v
 
     @field_validator("entsoe_domain")
-    def validate_entsoe_domain(self, v, values):
+    @classmethod
+    def validate_entsoe_domain(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Ensure ENTSO-E domain is provided if using ENTSO-E API."""
-        if values.get("api_type") == "entsoe" and not v:
+        api_type = info.data.get("api_type")
+        if api_type == "entsoe" and not v:
             raise ValueError("entsoe_domain is required when api_type is 'entsoe'")
         return v
 
@@ -54,7 +57,8 @@ class WeatherConfig(BaseModel):
     )
 
     @field_validator("api_type")
-    def validate_api_type(self, v):
+    @classmethod
+    def validate_api_type(cls, v: str) -> str:
         """Validate weather API type."""
         allowed = ["open_meteo", "openweather", "darksky", "custom"]
         if v not in allowed:
@@ -70,7 +74,8 @@ class GasConfig(BaseModel):
     currency: str = Field("EUR", description="Currency code")
 
     @field_validator("currency")
-    def validate_currency(self, v):
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
         """Validate currency code."""
         # Simple 3-letter currency code validation
         if not re.match(r"^[A-Z]{3}$", v):
@@ -144,7 +149,8 @@ class CountryConfigSchema(BaseModel):
     features: FeaturesConfig = Field(default_factory=FeaturesConfig)
 
     @field_validator("timezone")
-    def validate_timezone(self, v):
+    @classmethod
+    def validate_timezone(cls, v: str) -> str:
         """Validate timezone string."""
         # Basic validation - check format
         if "/" not in v:
@@ -186,7 +192,8 @@ def generate_config_template(country_code: str, country_name: str) -> dict:
     return {
         "country_code": country_code.upper(),
         "country_name": country_name,
-        "timezone": "UTC",  # User should change this
+        # Use a valid IANA-style timezone; users may override this
+        "timezone": "Etc/UTC",
         "electricity": {
             "api_type": "entsoe",  # Most common for EU
             "entsoe_domain": country_code.upper(),

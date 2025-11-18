@@ -111,7 +111,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
                 )
             elif "401" in error_msg or "403" in error_msg:
                 logger.error(
-                    "Authentication error. Please check:\n"
+                    "Authentication error. Please check_flag:\n"
                     "  1. ENTSOE_API_KEY is set correctly in .env\n"
                     "  2. API key is valid and not expired"
                 )
@@ -172,7 +172,14 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             return pd.DataFrame(columns=["timestamp", "load_mw", "quality_flag"])
 
     @staticmethod
-    def _parse_price_response(xml_data: dict) -> pd.DataFrame:
+    def _get_freq(f_resolution: str) -> str:
+        if f_resolution == "PT15M":
+            freq = "15min"
+        else:
+            freq = "1H"  # Default
+        return freq
+
+    def _parse_price_response(self, xml_data: dict) -> pd.DataFrame:
         """
         Parse ENTSO-E XML response for prices.
 
@@ -202,13 +209,8 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
                     start_time = pd.to_datetime(p["timeInterval"]["start"], utc=True)
                     resolution = p["resolution"]  # e.g. 'PT60M' for hourly
 
-                    # Parse resolution (PT60M = 60 minutes)
-                    if resolution == "PT60M":
-                        freq = "1H"
-                    elif resolution == "PT15M":
-                        freq = "15min"
-                    else:
-                        freq = "1H"  # Default
+                    freq = self._get_freq(f_resolution=resolution)
+                    logging.debug(f"freq: {freq}")
 
                     points = p["Point"]
                     if not isinstance(points, list):
@@ -241,8 +243,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.error(f"Failed to parse price response: {e}")
             return pd.DataFrame(columns=["timestamp", "price_eur_mwh", "market", "quality_flag"])
 
-    @staticmethod
-    def _parse_load_response(xml_data: dict) -> pd.DataFrame:
+    def _parse_load_response(self, xml_data: dict) -> pd.DataFrame:
         """
         Parse ENTSO-E XML response for load data.
 
@@ -270,12 +271,8 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
                     start_time = pd.to_datetime(p["timeInterval"]["start"], utc=True)
                     resolution = p["resolution"]
 
-                    if resolution == "PT60M":
-                        freq = "1H"
-                    elif resolution == "PT15M":
-                        freq = "15min"
-                    else:
-                        freq = "1H"
+                    freq = self._get_freq(f_resolution=resolution)
+                    logging.debug(f"freq: {freq}")
 
                     points = p["Point"]
                     if not isinstance(points, list):

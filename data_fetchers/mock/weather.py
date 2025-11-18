@@ -9,6 +9,7 @@ This module generates synthetic weather data with realistic patterns.
 """
 
 import logging
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -55,8 +56,9 @@ class MockWeatherFetcher(WeatherDataFetcher):
             DataFrame with synthetic weather data
         """
         # Create an hourly timestamp range (inclusive of full end_date)
-        end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
-        timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(hours=1)
+        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="1h", tz="UTC")
 
         # Use a dedicated RNG for reproducibility of weather
         rng = np.random.default_rng(45)

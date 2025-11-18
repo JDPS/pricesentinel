@@ -161,7 +161,7 @@ Quick summary:
 # Run all tests
 pytest
 
-# Run with coverage (HTML and terminal)
+# Run with coverage_enable (HTML and terminal)
 pytest --cov=. --cov-report=html --cov-report=term-missing
 ```
 

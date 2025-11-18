@@ -10,6 +10,7 @@ realistic patterns for testing the abstraction layer.
 """
 
 import logging
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -52,10 +53,12 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         Returns:
             DataFrame with synthetic price data
         """
+
         # Create an hourly timestamp range (inclusive of full end_date)
         # Add one day to end_date to include all 24 hours
-        end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
-        timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(hours=1)
+        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="1h", tz="UTC")
 
         # Use a dedicated RNG for reproducibility of prices
         rng = np.random.default_rng(42)
@@ -109,8 +112,9 @@ class MockElectricityFetcher(ElectricityDataFetcher):
             DataFrame with synthetic load data
         """
         # Create an hourly timestamp range (inclusive of full end_date)
-        end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
-        timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(hours=1)
+        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="1h", tz="UTC")
 
         # Use a dedicated RNG for reproducibility of the load
         rng = np.random.default_rng(43)
@@ -154,8 +158,9 @@ class MockElectricityFetcher(ElectricityDataFetcher):
             DataFrame with synthetic generation by source
         """
         # Create an hourly timestamp range (inclusive of full end_date)
-        end_datetime = pd.to_datetime(end_date) + pd.Timedelta(days=1) - pd.Timedelta(hours=1)
-        timestamps = pd.date_range(start=start_date, end=end_datetime, freq="1h", tz="UTC")
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1) - timedelta(hours=1)
+        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="1h", tz="UTC")
 
         # Use a dedicated RNG for reproducibility of generation
         rng = np.random.default_rng(44)

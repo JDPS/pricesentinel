@@ -6,7 +6,7 @@
 
 Usage:
     uv run invoke --list          # List all tasks
-    uv run invoke test            # Run tests with coverage
+    uv run invoke test            # Run tests with coverage_enable
     uv run invoke lint --fix      # Lint and auto-fix
     uv run invoke check           # Run all checks
     uv run invoke docs --serve    # Serve documentation locally
@@ -16,19 +16,19 @@ from invoke import task
 
 
 @task
-def test(c, coverage=True, verbose=False, markers=None):
+def test(c, coverage_enable=True, verbose=False, markers=None):
     """
-    Run tests with optional coverage.
+    Run tests with optional coverage_enable.
 
     Args:
         c: Invoke context
-        coverage: Enable coverage collection (default: True)
+        coverage_enable: Enable coverage_enable collection (default: True)
         verbose: Verbose output (default: False)
         markers: pytest markers to filter tests (e.g. "unit", "integration")
     """
     cmd = "uv run pytest"
 
-    if coverage:
+    if coverage_enable:
         cmd += " --cov --cov-report=html --cov-report=term-missing"
 
     if verbose:
@@ -61,16 +61,16 @@ def lint(c, fix=False):
 
 
 @task
-def format(c, check=False):
+def run_ruff_formatter(c, check_flag=False):
     """
     Format code with ruff.
 
     Args:
         c: Invoke context
-        check: Only check formatting without making changes
+        check_flag: Only check formatting without making changes
     """
     cmd = "uv run ruff format ."
-    if check:
+    if check_flag:
         cmd += " --check"
 
     print(f"Running: {cmd}")
@@ -89,7 +89,7 @@ def typecheck(c):
 def check(c):
     """Run all checks (format, lint, typecheck, test)."""
     print("\n=== Checking Code Format ===")
-    format(c, check=True)
+    run_ruff_formatter(c, check_flag=True)
 
     print("\n=== Running Linter ===")
     lint(c)
@@ -125,13 +125,13 @@ def docs(c, serve=False, strict=False):
 
 
 @task
-def clean(c, docs=False, cache=False):
+def clean(c, docs_flag=False, cache=False):
     """
     Clean build artefacts.
 
     Args:
         c: Invoke context
-        docs: Also clean documentation build (default: False)
+        docs_flag: Also clean documentation build (default: False)
         cache: Also clean cache directories (default: False)
     """
     patterns = [
@@ -140,11 +140,11 @@ def clean(c, docs=False, cache=False):
         "*.egg-info",
         ".pytest_cache",
         "htmlcov",
-        ".coverage",
-        "coverage.xml",
+        ".coverage_enable",
+        "coverage_enable.xml",
     ]
 
-    if docs:
+    if docs_flag:
         patterns.extend(["site"])
 
     if cache:
@@ -244,13 +244,13 @@ def build(c, formats="wheel"):
 @task
 def coverage(c, report=False):
     """
-    Generate coverage reports.
+    Generate coverage_enable reports.
 
     Args:
         c: Invoke context
-        report: Open HTML coverage report in browser
+        report: Open HTML coverage_enable report in browser
     """
-    print("Running tests with coverage...")
+    print("Running tests with coverage_enable...")
     c.run("uv run pytest --cov --cov-report=html --cov-report=term")
 
     if report:
@@ -258,7 +258,7 @@ def coverage(c, report=False):
         import webbrowser
 
         report_path = os.path.abspath("htmlcov/index.html")
-        print(f"Opening coverage report: {report_path}")
+        print(f"Opening coverage_enable report: {report_path}")
         webbrowser.open(f"file://{report_path}")
 
 
