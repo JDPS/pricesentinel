@@ -1,3 +1,5 @@
+![Static Badge](https://img.shields.io/badge/python-v3.13-blue)
+![Static Badge](https://img.shields.io/badge/LICENSE-Apache_2.0-blue)
 ![Coverage](coverage.svg)
 
 # PriceSentinel: Event-Aware Energy Price Forecasting
