@@ -4,6 +4,8 @@
 
 Multi-country energy price forecasting system with event awareness and data quality guards.
 
+![Logo](psent.png)
+
 ## Features
 
 - **Multi-country support**: Extensible architecture for any country/market

@@ -57,9 +57,9 @@ SPDX-FileCopyrightText = "2025 Soares"
 SPDX-License-Identifier = "Apache-2.0"
 precedence = "aggregate"
 
-# SVG files
+# Image files
 [[annotations]]
-path = ["coverage.svg"]
+path = ["coverage.svg", "psent.png"]
 SPDX-FileCopyrightText = "2025 Soares"
 SPDX-License-Identifier = "Apache-2.0"
 precedence = "aggregate"
