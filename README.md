@@ -32,6 +32,8 @@ Multi-country energy price forecasting system with event awareness and data qual
 
 ## Quick Start
 
+A quick guide to get started with PriceSentinel.
+
 ### Installation
 
 ```bash
