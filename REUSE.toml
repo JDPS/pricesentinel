@@ -80,7 +80,7 @@ precedence = "aggregate"
 
 # Others
 [[annotations]]
-path = [".python-version", "renovate.json.improved"]
+path = [".python-version"]
 SPDX-FileCopyrightText = "2025 Soares"
 SPDX-License-Identifier = "Apache-2.0"
 precedence = "aggregate"

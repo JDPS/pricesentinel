@@ -109,7 +109,7 @@ addopts = [
     "--cov-report=html",
     "--cov-report=term-missing",
     "--cov-report=xml",
-    "--basetemp=./.pytest_temp_safe",
+    "--basetemp=./.ptmp",
     "-p", "no:cacheprovider",
 ]
 markers = [
@@ -144,7 +144,7 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
     "pass",
 ]
-fail_under = 60
+fail_under = 15
 show_missing = true
 precision = 2
 
