@@ -39,6 +39,7 @@ CountryRegistry.register('PT', {
 ```
 
 **Key Classes**:
+
 - `CountryRegistry`: Stores country-to-adapter mappings
 - `FetcherFactory`: Creates fetcher instances for a country
 - `CountryConfig`: Parsed country configuration
@@ -68,10 +69,10 @@ Example: `PT_electricity_20240101_20240131.csv`
 Country-agnostic pipeline that coordinates all stages:
 
 1. **Data Fetching**: Calls appropriate fetchers
-2. **Data Cleaning**: Verification and normalisation (Phase 3)
-3. **Feature Engineering**: Generate model features (Phase 4)
-4. **Model Training**: Train forecasting models (Phase 6)
-5. **Forecast Generation**: Produce predictions (Phase 7)
+2. **Data Cleaning**: Verification and normalisation (Implemented)
+3. **Feature Engineering**: Generate model features (Implemented)
+4. **Model Training**: Train forecasting models (Implemented)
+5. **Forecast Generation**: Produce predictions (Implemented)
 
 The pipeline never contains country-specific logic — it only calls registered adapters.
 
@@ -80,18 +81,21 @@ The pipeline never contains country-specific logic — it only calls registered 
 #### Country-Specific Fetchers
 
 **Portugal** (`data_fetchers/portugal/`):
+
 - `PortugalElectricityFetcher`: ENTSO-E API integration
 - `PortugalEventProvider`: Portuguese holidays
 
 #### Reusable Fetchers
 
 **Shared** (`data_fetchers/shared/`):
+
 - `OpenMeteoWeatherFetcher`: Works for any coordinates
 - `TTFGasFetcher`: Works for EU countries using TTF
 
 #### Mock Fetchers
 
 **Mock Country** (`data_fetchers/mock/`):
+
 - Synthetic data generators for testing
 - No API access required
 - Reproducible outputs
@@ -158,6 +162,7 @@ features:
 ### Validation
 
 Pydantic models (`config/validation.py`) validate configs:
+
 - Required fields present
 - Valid coordinate ranges
 - Valid timezone strings
@@ -179,6 +184,7 @@ Pydantic models (`config/validation.py`) validate configs:
 4. **Test** with CLI
 
 **No changes needed to**:
+
 - Core pipeline code
 - Data management
 - CLI interface
@@ -196,61 +202,71 @@ To add a new data source (e.g. solar forecasts):
 ## Testing Strategy
 
 ### Unit Tests
+
 - Abstract base classes enforce implementation
 - Registry properly stores/retrieves adapters
 - Individual fetchers return correct schemas
 
 ### Integration Tests
+
 - Mock country validates full pipeline
 - Country data isolation verified
 - Multi-country scenarios tested
 
 ### Test Fixtures
+
 - `clean_registry`: Clears registry before/after tests
 - `mock_country_setup`: Registers mock country
 
 ## Error Handling
 
 ### Graceful Degradation
+
 - Missing data sources logged but don't crash
 - Empty DataFrames returned with the correct schema
 - Pipeline continues with available data
 
 ### Validation
+
 - Configs validated at the startup (fail-fast)
 - Missing API keys raise clear errors
 - Invalid dates rejected early
 
+## Implemented Enhancements (Phases 2-7)
+
+### Data Quality (Phase 2-3)
+
+- Timestamp normalization
+- Basic data cleaning for all sources
+
+### Features & Guards (Phase 4-5)
+
+- Standard feature engineering (lags, calendar)
+- Runtime data quality guards
+
+### Modeling (Phase 6-7)
+
+- Baseline Scikit-Learn trainer
+- Basic forecasting pipeline
+
 ## Future Enhancements
 
-### Phase 2-3: Data Quality
-- Country-specific data quality limits
-- Timezone-aware normalization
-- Missing value strategies
+### Production (Phase 8-10)
 
-### Phase 4–5: Features & Guards
-- Country-specific feature plugins
-- Runtime data quality guards
-- Alert system
-
-### Phase 6-7: Modeling
-- Country-specific model registry
-- Multi-horizon forecasting
-- Confidence intervals
-
-### Phase 8–10: Production
 - Monitoring dashboards
 - Automated retraining
 - Deployment packaging
-
-## Performance Considerations
+- Parallel fetching
+- Database storage
 
 ### Current (MVP)
+
 - Sequential data fetching
 - CSV storage
 - Single-threaded pipeline
 
 ### Future Optimisations
+
 - Parallel fetching for multiple countries
 - Parquet/database storage
 - Distributed processing
@@ -259,11 +275,13 @@ To add a new data source (e.g. solar forecasts):
 ## Security
 
 ### API Keys
+
 - Stored in `.env` (gitignored)
 - Loaded via `python-dotenv`
 - Never hardcoded
 
 ### Data Privacy
+
 - Raw data gitignored
 - No PII collected
 - Logs exclude sensitive info
@@ -271,10 +289,12 @@ To add a new data source (e.g. solar forecasts):
 ## Deployment
 
 ### Current
+
 - Run locally via CLI
 - Manual data fetching
 
 ### Planned (Phase 10)
+
 - Docker containerization
 - Scheduled runs (cron/scheduler)
 - Cloud deployment options

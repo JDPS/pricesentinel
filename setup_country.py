@@ -39,9 +39,9 @@ def main():
         print(f"Got: {country_code}")
         sys.exit(1)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Setting up directory structure for: {country_code}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     try:
         manager = setup_country_directories(country_code)
@@ -65,7 +65,7 @@ def main():
         print(f"1. Create configuration: config/countries/{country_code}.yaml")
         print("2. Implement data fetchers (if needed)")
         print("3. Register country in data_fetchers/__init__.py")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
     except Exception as e:
         logger.error(f"Failed to set up directories: {e}")

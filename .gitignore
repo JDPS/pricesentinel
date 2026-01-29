@@ -64,6 +64,7 @@ reports/*.html
 
 # Testing
 .pytest_cache/
+.pytest_temp/
 .coverage
 htmlcov/
 .tox/
@@ -81,3 +82,4 @@ Thumbs.db
 dev_ws/
 /.dev_ws/
 /train_protocol.md
+/tmp_pytest/

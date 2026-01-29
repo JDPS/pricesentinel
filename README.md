@@ -19,11 +19,11 @@ Multi-country energy price forecasting system with event awareness and data qual
 
 ## Current Status
 
-- **Phase 0 Complete**: Architecture and abstraction layer
-- **Phase 1 Complete**: Project setup and Portugal implementation
-- **Initial Cleaning & Features**: Basic cleaning and feature engineering implemented for electricity, weather, and gas
-- **Baseline Training**: End-to-end training pipeline implemented for mock country (XX) using scikit-learn
-- **Phases 2–10**: Advanced guards, forecasting, monitoring, and deployment in development
+- **Fully Implemented MVP**: End-to-end pipeline (Fetch → Clean → Features → Train → Forecast) works for Mock Country (XX).
+- **Portugal (PT)**: Fetching, cleaning, and basic features working. Baseline model training operational.
+- **Quality**: Windows-compatible automation, 100% test pass rate, and CI/CD guardrails established.
+- **Phases 6–7**: Baseline training implemented.
+- **Phases 8–10**: CI/CD and Testing implemented. Monitoring in development.
 
 ### Implemented Countries
 
@@ -63,11 +63,13 @@ copy .env.example .env
 ### Configuration
 
 1. Add your ENTSO-E API key to `.env`:
+
    ```bash
    ENTSOE_API_KEY=your_key_here
    ```
 
 2. (Optional) Download TTF gas prices and place in:
+
    ```text
    data/manual_imports/ttf_gas_prices.csv
    ```
@@ -161,6 +163,7 @@ Quick summary:
 2. Implement country-specific fetchers (if needed)
 3. Register in `data_fetchers/__init__.py`
 4. Test with:
+
    ```bash
    python run_pipeline.py --country {CODE} --info
    ```
@@ -212,34 +215,33 @@ under `data/{country}/processed/forecasts/` for the given model.
 
 ## Roadmap
 
-### Phase 0 (Complete)
-- Core abstractions
-- Country registry
-- Mock country implementation
+### Phase 0–1 (Complete)
 
-### Phase 1 (Complete)
-- Project setup
-- Portugal implementation
-- CLI interface
-- Initial tests
+- Core abstractions, Registry, CLI
+- Portugal implementation (Fetchers)
 
-### Phase 2–3 (In progress)
-- Data verification and cleaning (basic cleaning implemented for electricity, weather, gas)
+### Phase 2–3 (Complete)
+
+- Data verification and cleaning (Electricity, Weather, Gas)
 - Timestamp normalization
-- Advanced quality checks and guards
+- Quality checks and guards
 
-### Phase 4–5
-- Feature engineering (initial lags and calendar features implemented)
-- Runtime guards and additional feature plugins
+### Phase 4–5 (Complete)
 
-### Phase 6–7
-- Model training (baseline scikit-learn regressor implemented for mock country)
-- Inference engine and production-ready model registry
+- Feature engineering (lags, rolling windows, calendar features)
+- Runtime guards
 
-### Phase 8–10
-- Reporting and monitoring
-- Extended testing and QA
-- Packaging and deployment
+### Phase 6–7 (In Progress)
+
+- Model training (Baseline Scikit-Learn implemented)
+- Inference engine (Basic forecasting implemented)
+- Production-ready model registry
+
+### Phase 8–10 (In Progress)
+
+- CI/CD Guardrails (GitHub Actions, Pre-commit) - **Complete**
+- Extended testing (100% pass rate) - **Complete**
+- Monitoring and Deployment
 
 ## Requirements
 
@@ -270,7 +272,8 @@ This project is licensed under the Apache Licence 2.0 – see the `LICENSE` file
 ## Contact
 
 For questions or issues:
-- Technical issues: joaosoarex@gmail.com
+
+- Technical issues: <joaosoarex@gmail.com>
 - API access: Check respective API provider documentation
 
 ---

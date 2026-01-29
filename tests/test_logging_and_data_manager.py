@@ -6,16 +6,41 @@
 Tests for logging configuration and CountryDataManager utilities.
 """
 
+import pytest
+
 from core.data_manager import CountryDataManager, setup_country_directories
 from core.logging_config import get_logger, setup_logging
 
 
-def test_setup_logging_creates_files_in_tmpdir(tmp_path, monkeypatch, caplog):
+@pytest.fixture(autouse=True)
+def clean_logging():
+    """Cleanup logging handlers before and after test."""
+    import logging
+
+    # Clean before
+    for handler in logging.root.handlers[:]:
+        handler.close()
+        logging.root.removeHandler(handler)
+
+    yield
+
+    # Clean after
+    for handler in logging.root.handlers[:]:
+        handler.close()
+        logging.root.removeHandler(handler)
+
+
+def test_setup_logging_creates_files_in_tmpdir(tmp_path, monkeypatch, caplog, clean_logging):
     """setup_logging should create log files in the given directory."""
     log_dir = tmp_path / "logs"
 
     # Ensure the environment does not override the level
     monkeypatch.delenv("LOG_LEVEL", raising=False)
+
+    # Reset logging handlers to avoid pollution
+    import logging
+
+    logging.root.handlers = []
 
     setup_logging(log_dir=str(log_dir), level="DEBUG", log_to_file=True)
     logger = get_logger(__name__)
@@ -72,7 +97,7 @@ def test_setup_country_directories_uses_manager(tmp_path, monkeypatch):
     base_path = tmp_path / "countries"
     monkeypatch.chdir(tmp_path)
 
-    manager = setup_country_directories("es", base_path=str(base_path))
+    manager = setup_country_directories("ES", base_path=str(base_path))
 
     assert isinstance(manager, CountryDataManager)
     assert manager.country_code == "ES"

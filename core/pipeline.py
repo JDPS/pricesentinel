@@ -481,9 +481,9 @@ class Pipeline:
             model_name: Name of the model to be used for predictions,
              defaults to DEFAULT_MODEL_NAME
         """
-        logger.info(f"\n{'='*70}")
+        logger.info(f"\n{'=' * 70}")
         logger.info(f"STARTING FULL PIPELINE FOR {self.country_code}")
-        logger.info(f"{'='*70}")
+        logger.info(f"{'=' * 70}")
         logger.info(f"Historical period: {start_date} to {end_date}")
         logger.info(f"Run ID: {self.run_id}\n")
 
@@ -503,9 +503,9 @@ class Pipeline:
             # Stage 5: Generate forecast
             self.generate_forecast(forecast_date)
 
-            logger.info(f"{'='*70}")
+            logger.info(f"{'=' * 70}")
             logger.info(f"PIPELINE COMPLETE FOR {self.country_code}")
-            logger.info(f"{'='*70}\n")
+            logger.info(f"{'=' * 70}\n")
 
         except Exception as e:
             logger.error(f"Pipeline failed: {e}", exc_info=True)

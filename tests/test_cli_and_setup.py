@@ -7,12 +7,23 @@ Tests for the run_pipeline CLI wiring and setup_country utility script.
 """
 
 from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+# We mock setup_country_main so we don't need to patch its internal logging
+# from setup_country import main as setup_country_main
+import pytest
 
 from config.country_registry import CountryRegistry
 from core.pipeline import Pipeline
 from data_fetchers.mock import register_mock_country
 from run_pipeline import PipelineCLI, validate_arguments
-from setup_country import main as setup_country_main
+
+
+@pytest.fixture(autouse=True)
+def mock_settings(monkeypatch):
+    """Disable file logging for all CLI tests."""
+    monkeypatch.setattr("run_pipeline.setup_logging", MagicMock())
+    monkeypatch.setattr("core.logging_config.setup_logging", MagicMock())
 
 
 def _make_args(**overrides):
@@ -93,6 +104,7 @@ def test_pipeline_cli_runs_all_stages_for_mock_country(tmp_path, monkeypatch):
         def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
             calls.append(("run_full", start_date, end_date, forecast_date, model_name))
 
+    monkeypatch.setattr("core.pipeline.Pipeline", DummyPipeline)
     monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
 
     cli.run()
@@ -184,6 +196,12 @@ def test_pipeline_cli_forecast_range_uses_generate_forecast_range(tmp_path, monk
 
 def test_setup_country_main_smoke(monkeypatch, tmp_path, capsys):
     """setup_country.main should create directories and print a summary."""
+    # Patch basicConfig to prevent side effects during import
+    monkeypatch.setattr("logging.basicConfig", lambda **kwargs: None)
+
+    # Deferred import
+    from setup_country import main as setup_country_main
+
     # Redirect current working directory so script writes under tmp_path
     monkeypatch.chdir(tmp_path)
 

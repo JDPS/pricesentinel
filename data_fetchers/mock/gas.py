@@ -93,9 +93,7 @@ class MockGasFetcher(GasDataFetcher):
         )
 
         logger.info(
-            f"Generated {len(df)} synthetic"
-            f" gas price records from {start_date}"
-            f" to {end_date}"
+            f"Generated {len(df)} synthetic gas price records from {start_date} to {end_date}"
         )
 
         return df

@@ -114,4 +114,4 @@ def test_task_pipeline_builds_expected_command():
     assert "--start-date 2024-01-01" in cmd
     assert "--end-date 2024-01-07" in cmd
     assert "--fetch" in cmd
-    assert pty is True
+    assert pty == tasks.PTY

@@ -12,7 +12,12 @@ Usage:
     uv run invoke docs --serve    # Serve documentation locally
 """
 
+import sys
+
 from invoke import task
+
+# Windows does not support pty
+PTY = sys.platform != "win32"
 
 
 @task
@@ -40,7 +45,7 @@ def test(c, coverage_enable=True, verbose=False, markers=None):
         cmd += f" -m {markers}"
 
     print(f"Running: {cmd}")
-    c.run(cmd, pty=True)
+    c.run(cmd, pty=PTY)
 
 
 @task
@@ -121,7 +126,7 @@ def docs(c, serve=False, strict=False):
             cmd += " --strict"
 
     print(f"Running: {cmd}")
-    c.run(cmd, pty=True)
+    c.run(cmd, pty=PTY)
 
 
 @task
@@ -212,7 +217,7 @@ def pipeline(c, country, start_date, end_date, fetch=False):
         cmd += " --fetch"
 
     print(f"Running: {cmd}")
-    c.run(cmd, pty=True)
+    c.run(cmd, pty=PTY)
 
 
 @task

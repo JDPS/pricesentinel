@@ -5,19 +5,24 @@ This guide will help you test the PriceSentinel implementation immediately.
 ## Phase 0 & 1: What's Been Implemented
 
 ✅ **Complete**:
+
 - Core abstraction layer
 - Country registry system
 - Mock country with synthetic data
 - Portugal data fetchers (ENTSO-E, Open-Meteo, TTF gas)
 - CLI interface
 - Data management system
-- Basic tests
+- **Data cleaning and verification**
+- **Feature engineering**
+- **Model training (Baseline)**
+- **Forecasting (Baseline)**
+- Basic tests & CI/CD
 
-⏳ **Not Yet Implemented** (Phases 2–10):
-- Data cleaning and verification
-- Feature engineering
-- Model training
-- Forecasting
+⏳ **Not Yet Implemented** (Future Phases):
+
+- Advanced forecasting models
+- Production monitoring
+- Deployment infrastructure
 
 ## Testing Without API Keys (Mock Country)
 
@@ -35,6 +40,7 @@ python run_pipeline.py --country XX --info
 ```
 
 **Expected Output**:
+
 - Synthetic electricity prices (hourly, 7 days = 168 records)
 - Synthetic weather data
 - Synthetic gas prices (daily, 7 records)
@@ -47,11 +53,12 @@ python run_pipeline.py --country XX --info
 ### Prerequisites
 
 1. **Get ENTSO-E API Key**:
-   - Register at: https://transparency.entsoe.eu/
+   - Register at: <https://transparency.entsoe.eu/>
    - Go to "Account Settings" → "Web API Security Token"
    - Copy your API key
 
 2. **Configure Environment**:
+
    ```bash
    # Copy environment template
    copy .env.example .env
@@ -75,6 +82,7 @@ python run_pipeline.py --country PT --info
 ```
 
 **Expected Output**:
+
 - Electricity prices from ENTSO-E
 - Electricity load from ENTSO-E
 - Weather data from Open-Meteo
@@ -110,6 +118,7 @@ python run_pipeline.py --country PT --info
 ```
 
 Should show:
+
 - Country: Portugal
 - Timezone: Europe/Lisbon
 - Data directory structure
@@ -135,6 +144,7 @@ print("Registered countries:", CountryRegistry.list_countries())
 ```
 
 Run it:
+
 ```bash
 python test_registry.py
 ```
@@ -144,21 +154,28 @@ Expected output: `Registered countries: ['PT', 'XX']`
 ## Common Issues
 
 ### Issue: "ENTSOE_API_KEY not found"
+
 **Solution**: Make sure `.env` file exists in the project root with your API key.
 
 ### Issue: "Country 'PT' not registered"
+
 **Solution**: The auto-registration might have failed. Check that `data_fetchers/portugal/__init__.py` exists.
 
 ### Issue: "No module named 'core'"
+
 **Solution**: Make sure you're running from the project root directory.
 
 ### Issue: "TTF gas CSV not found"
+
 **Solution**: This is expected for MVP. You can:
+
 - Ignore it (a pipeline continues without gas data)
 - Create a template: `data/manual_imports/ttf_gas_prices.csv`
 
 ### Issue: Import errors
+
 **Solution**: Make sure all dependencies are installed:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -166,24 +183,26 @@ pip install -r requirements.txt
 ## What to Expect
 
 ### Current Functionality ✅
+
 - Data fetching from APIs
 - Synthetic data generation (mock)
-- Data storage with proper naming
-- Country abstraction working
-- CLI interface functional
+- **Data cleaning and verification**
+- **Feature engineering**
+- **Model training and forecasting**
+- CLI interface fully functional
 
 ### Not Yet Working ⏳
-- Data cleaning (returns raw data as-is)
-- Feature engineering (skipped)
-- Model training (not implemented)
-- Forecasting (not implemented)
+
+- Advanced Deep Learning models
+- Real-time monitoring dashboard
 
 When you run `--all`, it will:
+
 1. ✅ Fetch data successfully
-2. ⚠️ Skip cleaning (logs warning)
-3. ⚠️ Skip features (logs warning)
-4. ⚠️ Skip training (logs warning)
-5. ⚠️ Skip forecast (logs warning)
+2. ✅ Clean and verify data
+3. ✅ Generate features
+4. ✅ Train baseline model
+5. ✅ Generate forecast
 
 ## Next Steps
 
@@ -208,6 +227,7 @@ You'll know everything is working if:
 ## Need Help?
 
 Check:
+
 - `README.md` - Full project documentation
 - `docs/ARCHITECTURE.md` - Architecture details
 - `dev_ws/RevisedPhase0_and_Phase1.md` - Implementation details

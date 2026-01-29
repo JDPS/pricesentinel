@@ -76,15 +76,14 @@ def parse_args() -> argparse.Namespace:
         "--start-on-or-after",
         type=str,
         help=(
-            "Filter: keep only runs where train_start_date is on or after this "
-            "date (YYYY-MM-DD)."
+            "Filter: keep only runs where train_start_date is on or after this date (YYYY-MM-DD)."
         ),
     )
     parser.add_argument(
         "--end-on-or-before",
         type=str,
         help=(
-            "Filter: keep only runs where train_end_date is on or before this " "date (YYYY-MM-DD)."
+            "Filter: keep only runs where train_end_date is on or before this date (YYYY-MM-DD)."
         ),
     )
     parser.add_argument(

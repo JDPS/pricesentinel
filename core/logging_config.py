@@ -62,7 +62,7 @@ def setup_logging(log_dir: str = "logs", level: str = "INFO", log_to_file: bool 
     # File handler (detailed format)
     if log_to_file:
         # Main log file
-        log_filename = log_path / f'pricesentinel_{datetime.now().strftime("%Y%m%d")}.log'
+        log_filename = log_path / f"pricesentinel_{datetime.now().strftime('%Y%m%d')}.log"
         file_handler = logging.FileHandler(log_filename, mode="a", encoding="utf-8")
         file_handler.setLevel(log_level)
         file_handler.setFormatter(detailed_formatter)
@@ -70,7 +70,7 @@ def setup_logging(log_dir: str = "logs", level: str = "INFO", log_to_file: bool 
 
         # Error log file (only errors and critical)
         error_log_filename = (
-            log_path / f'pricesentinel_error_{datetime.now().strftime( "%Y%m%d")}.log'
+            log_path / f"pricesentinel_error_{datetime.now().strftime('%Y%m%d')}.log"
         )
         error_file_handler = logging.FileHandler(error_log_filename, mode="a", encoding="utf-8")
         error_file_handler.setLevel(logging.ERROR)
