@@ -100,6 +100,9 @@ python run_pipeline.py --country XX --all --model-name my_experiment --start-dat
 
 # Use fast training mode (smaller model, quick demo)
 python run_pipeline.py --country XX --all --fast-train --start-date 2024-01-01 --end-date 2024-01-07
+
+# Generate forecasts (after training)
+python run_pipeline.py --country PT --forecast --forecast-date 2024-01-08
 ```
 
 ## Project Structure
