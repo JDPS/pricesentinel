@@ -13,8 +13,7 @@ description = "Multi-country energy price forecasting with event awareness and d
 readme = "README.md"
 requires-python = ">=3.13"
 
-[tool.hatch.build.targets.wheel]
-packages = ["core", "config", "data_fetchers"]
+
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Soares", email = "joaosoarex@gmail.com"},
@@ -52,6 +51,8 @@ dependencies = [
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
     "xmltodict>=0.14.2",
+    "scikit-learn>=1.6.0",
+    "holidays>=0.40",
 ]
 
 [project.optional-dependencies]
@@ -61,6 +62,7 @@ dev = [
     "pre-commit>=4.0.0",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.32.0",
+    "invoke>=2.2.0",
 ]
 test = [
     "pytest>=9.0.1",
@@ -92,6 +94,10 @@ Issues = "https://github.com/JDPS/pricesentinel/issues"
 
 [project.scripts]
 pricesentinel = "run_pipeline:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["core", "config", "data_fetchers"]
+
 
 # Tool configurations consolidated
 
