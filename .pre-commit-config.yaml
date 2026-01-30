@@ -28,7 +28,7 @@ repos:
       - id: check-toml
       - id: check-json
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        args: ["--maxkb=1000"]
       - id: mixed-line-ending
 
   # Conventional Commits enforcement (at commit message time)

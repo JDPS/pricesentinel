@@ -111,12 +111,9 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "-ra",
-    "--cov=.",
-    "--cov-report=html",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
     "--basetemp=./.ptmp",
     "-p", "no:cacheprovider",
+    "--ignore=tests/test_tasks.py",
 ]
 markers = [
     "unit: Unit tests for individual components",

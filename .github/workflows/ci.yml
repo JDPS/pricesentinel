@@ -6,9 +6,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
 
 jobs:
   build-test:
@@ -88,7 +88,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies
-        run: uv sync --group security
+        run: uv sync --extra security
 
       - name: Run pip-audit
         run: uv run pip-audit
