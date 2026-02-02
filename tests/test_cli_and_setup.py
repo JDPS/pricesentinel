@@ -101,11 +101,14 @@ def test_pipeline_cli_runs_all_stages_for_mock_country(tmp_path, monkeypatch):
             # Skip parent initialisation; just record initialisation
             calls.append(("init", country_code))
 
-        def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
+        async def run_full_pipeline(
+            self, start_date, end_date, forecast_date, model_name="baseline"
+        ):
             calls.append(("run_full", start_date, end_date, forecast_date, model_name))
 
-    monkeypatch.setattr("core.pipeline.Pipeline", DummyPipeline)
-    monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
+    monkeypatch.setattr(
+        "run_pipeline.PipelineBuilder.create_pipeline", lambda country: DummyPipeline(country)
+    )
 
     cli.run()
 
@@ -145,13 +148,17 @@ def test_pipeline_cli_fast_train_adjusts_model_name(tmp_path, monkeypatch):
         """
 
         def __init__(self, country_code: str):  # noqa: D401
-            super().__init__(country_code)
+            # super().__init__(country_code) # Skipped for spy
             calls.append(("init", country_code))
 
-        def run_full_pipeline(self, start_date, end_date, forecast_date, model_name="baseline"):
+        async def run_full_pipeline(
+            self, start_date, end_date, forecast_date, model_name="baseline"
+        ):
             calls.append(("run_full", start_date, end_date, forecast_date, model_name))
 
-    monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
+    monkeypatch.setattr(
+        "run_pipeline.PipelineBuilder.create_pipeline", lambda country: DummyPipeline(country)
+    )
 
     cli.run()
 
@@ -186,7 +193,9 @@ def test_pipeline_cli_forecast_range_uses_generate_forecast_range(tmp_path, monk
         def generate_forecast_range(self, start_date, end_date, model_name="baseline"):
             calls.append(("range", start_date, end_date, model_name))
 
-    monkeypatch.setattr("run_pipeline.Pipeline", DummyPipeline)
+    monkeypatch.setattr(
+        "run_pipeline.PipelineBuilder.create_pipeline", lambda country: DummyPipeline(country)
+    )
 
     cli.run()
 

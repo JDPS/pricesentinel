@@ -87,3 +87,6 @@ dev_ws/
 /tmp_pytest/
 .ptmp/
 *.txt
+/.hypothesis/
+/site/
+/.hypothesis/

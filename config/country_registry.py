@@ -15,6 +15,8 @@ from pathlib import Path
 
 import yaml
 
+from config.adapter_registry import AdapterRegistry, get_default_registry
+
 logger = logging.getLogger(__name__)
 
 configure_directory: str = "config/countries"
@@ -101,9 +103,10 @@ class CountryRegistry:
 
     This registry uses the adapter pattern to allow country-specific
     implementations while maintaining a consistent interface.
-    """
 
-    _registry: dict[str, dict[str, type]] = {}
+    .. deprecated:: 0.2.0
+       Use config.adapter_registry.AdapterRegistry instead.
+    """
 
     @classmethod
     def register(cls, country_code: str, adapters: dict):
@@ -133,7 +136,15 @@ class CountryRegistry:
         if missing_adapters:
             raise ValueError(f"Missing required adapters for {country_code}: {missing_adapters}")
 
-        cls._registry[country_code] = adapters
+        # Delegate to default registry
+        registry = get_default_registry()
+        registry.register(
+            country_code,
+            electricity=adapters["electricity"],
+            weather=adapters["weather"],
+            gas=adapters["gas"],
+            events=adapters["events"],
+        )
         logger.info(f"Registered country: {country_code}")
 
     @classmethod
@@ -150,15 +161,17 @@ class CountryRegistry:
         Raises:
             ValueError: If the country is not registered
         """
-        if country_code not in cls._registry:
-            available = cls.list_countries()
+        registry = get_default_registry()
+        try:
+            return registry.get_adapters(country_code)
+        except Exception as e:
+            # Re-raise as ValueError to match old interface
+            available = registry.list_countries()
             raise ValueError(
                 f"Country '{country_code}' not registered.\n"
                 f"Available countries: {available}\n"
                 f"Please register the country first or check the country code."
-            )
-
-        return cls._registry[country_code]
+            ) from e
 
     @classmethod
     def list_countries(cls) -> list:
@@ -168,7 +181,7 @@ class CountryRegistry:
         Returns:
             List of country codes
         """
-        return sorted(cls._registry.keys())
+        return get_default_registry().list_countries()
 
     @classmethod
     def is_registered(cls, country_code: str) -> bool:
@@ -181,14 +194,14 @@ class CountryRegistry:
         Returns:
             True if the country is registered, False otherwise
         """
-        return country_code in cls._registry
+        return get_default_registry().is_registered(country_code)
 
     @classmethod
     def clear(cls):
         """
         Clear all registered countries (mainly for testing).
         """
-        cls._registry.clear()
+        get_default_registry().clear()
         logger.debug("Cleared country registry")
 
 
@@ -201,7 +214,11 @@ class FetcherFactory:
     """
 
     @staticmethod
-    def create_fetchers(country_code: str, config_dir: str = configure_directory) -> dict:
+    def create_fetchers(
+        country_code: str,
+        config_dir: str = configure_directory,
+        registry: AdapterRegistry | None = None,
+    ) -> dict:
         """
         Create fetcher instances for a country.
 
@@ -228,7 +245,8 @@ class FetcherFactory:
         config = CountryConfig.from_yaml(country_code, config_dir)
 
         # Get adapter classes
-        adapters = CountryRegistry.get_adapters(country_code)
+        registry = registry or get_default_registry()
+        adapters = registry.get_adapters(country_code)
 
         # Instantiate fetchers with configuration
         try:

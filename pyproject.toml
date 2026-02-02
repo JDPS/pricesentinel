@@ -50,9 +50,14 @@ dependencies = [
     "pydantic>=2.12.4,<3",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
+    "httpx[http2]>=0.28.1",
     "xmltodict>=0.14.2",
     "scikit-learn>=1.6.0",
     "holidays>=0.40",
+    "click>=8.3.1",
+    "tqdm>=4.67.2",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=0.25.2",
 ]
 
 [project.optional-dependencies]
@@ -68,6 +73,8 @@ test = [
     "pytest>=9.0.1",
     "pytest-cov>=6.0.0",
     "pytest-xdist>=3.6.1",
+    "pytest-asyncio>=0.25.2",
+    "hypothesis>=6.98.0",
 ]
 security = [
     "pip-audit>=2.7.0",
@@ -111,15 +118,18 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "-ra",
-    "--basetemp=./.ptmp",
+    "--basetemp=.ptmp",
     "-p", "no:cacheprovider",
     "--ignore=tests/test_tasks.py",
 ]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: Unit tests for individual components",
     "integration: Integration tests spanning multiple components",
     "slow: Tests that take a long time to run",
     "api: Tests that require external API access",
+    "asyncio: Mark test as using asyncio",
 ]
 norecursedirs = [".git", ".venv", "venv", "env", "data", "logs", "outputs", "models"]
 

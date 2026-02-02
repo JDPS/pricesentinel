@@ -25,6 +25,7 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-yaml
+        args: ["--unsafe"]
       - id: check-toml
       - id: check-json
       - id: check-added-large-files
@@ -50,6 +51,7 @@ repos:
           - pandas-stubs==2.3.2.250926
           - types-PyYAML
           - types-requests
+          - httpx>=0.28.1
 
   # REUSE license compliance
   - repo: https://github.com/fsfe/reuse-tool
@@ -65,7 +67,7 @@ repos:
       # Run pytest before commit to ensure tests pass
       - id: pytest-check
         name: pytest
-        entry: uv run pytest -q
+        entry: uv run pytest -q -p no:xdist
         language: system
         pass_filenames: false
         stages: [pre-commit]

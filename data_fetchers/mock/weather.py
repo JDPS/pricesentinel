@@ -44,7 +44,7 @@ class MockWeatherFetcher(WeatherDataFetcher):
         )
         logger.debug(f"Initialized MockWeatherFetcher for {self.country_code}")
 
-    def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Generate hourly weather data with realistic patterns.
 

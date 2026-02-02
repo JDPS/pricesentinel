@@ -10,8 +10,37 @@ ensuring all required fields are present and have valid values.
 """
 
 import re
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+
+
+def validate_date_range(start_date: str, end_date: str) -> tuple[str, str]:
+    """
+    Validate that start_date and end_date are valid dates and start_date <= end_date.
+
+    Args:
+        start_date: Start date string (YYYY-MM-DD)
+        end_date: End date string (YYYY-MM-DD)
+
+    Returns:
+        tuple[str, str]: Validated start and end date strings
+
+    Raises:
+        ValueError: If dates are invalid or start_date > end_date
+    """
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=UTC)
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    except ValueError as e:
+        raise ValueError(f"Invalid date format. Expected YYYY-MM-DD: {e}") from e
+
+    if start_dt > end_dt:
+        raise ValueError(
+            f"start_date ({start_date}) must be before or equal to end_date ({end_date})"
+        )
+
+    return start_date, end_date
 
 
 class CoordinateConfig(BaseModel):

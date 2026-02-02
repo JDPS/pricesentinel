@@ -11,8 +11,8 @@ It's country-agnostic and configured via country configuration files.
 
 import logging
 
+import httpx
 import pandas as pd
-import requests
 
 from core.abstractions import WeatherDataFetcher
 
@@ -50,7 +50,7 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
             f"with {len(self.coordinates)} location(s)"
         )
 
-    def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch weather data for configured locations.
 
@@ -71,14 +71,17 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
 
         all_data = []
 
-        for coord in self.coordinates:
-            try:
-                location_df = self._fetch_location_weather(coord, start_date, end_date)
-                all_data.append(location_df)
+        async with httpx.AsyncClient() as client:
+            for coord in self.coordinates:
+                try:
+                    location_df = await self._fetch_location_weather(
+                        client, coord, start_date, end_date
+                    )
+                    all_data.append(location_df)
 
-            except Exception as e:
-                logger.error(f"Failed to fetch weather for {coord['name']}: {e}")
-                # Continue with other locations
+                except Exception as e:
+                    logger.error(f"Failed to fetch weather for {coord['name']}: {e}")
+                    # Continue with other locations
 
         if not all_data:
             logger.warning("No weather data fetched for any location")
@@ -99,7 +102,9 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
 
         return df
 
-    def _fetch_location_weather(self, coord: dict, start_date: str, end_date: str) -> pd.DataFrame:
+    async def _fetch_location_weather(
+        self, client: httpx.AsyncClient, coord: dict, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """
         Fetch weather data for a single location.
 
@@ -120,7 +125,7 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
             "timezone": "UTC",  # Always fetch in UTC
         }
 
-        response = requests.get(self.BASE_URL, params=params, timeout=30)
+        response = await client.get(self.BASE_URL, params=params, timeout=30)
         response.raise_for_status()
 
         data = response.json()

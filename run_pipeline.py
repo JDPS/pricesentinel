@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -34,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config.country_registry import CountryRegistry
 from core.logging_config import setup_logging
 from core.pipeline import Pipeline
+from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 
 
@@ -227,7 +229,7 @@ class PipelineCLI:
 
     def init_pipeline(self) -> None:
         self.logger.info(f"Initializing pipeline for {self.args.country}...")
-        self.pipeline = Pipeline(country_code=self.args.country)
+        self.pipeline = PipelineBuilder.create_pipeline(self.args.country)
 
     def show_info_and_exit(self) -> None:
         if self.pipeline is None:
@@ -252,7 +254,7 @@ class PipelineCLI:
         print("=" * 70 + "\n")
         sys.exit(0)
 
-    def run_stages(self) -> None:
+    async def run_stages(self) -> None:
         if self.pipeline is None:
             raise RuntimeError("Pipeline not initialized")
 
@@ -266,7 +268,7 @@ class PipelineCLI:
         end_date = self.args.end_date
 
         if self.args.all:
-            self.pipeline.run_full_pipeline(
+            await self.pipeline.run_full_pipeline(
                 self.args.start_date,
                 self.args.end_date,
                 self.args.forecast_date,
@@ -275,7 +277,7 @@ class PipelineCLI:
             return
 
         if self.args.fetch:
-            self.pipeline.fetch_data(start_date, end_date)
+            await self.pipeline.fetch_data(start_date, end_date)
 
         if self.args.clean:
             self.pipeline.clean_and_verify(start_date, end_date)
@@ -309,7 +311,7 @@ class PipelineCLI:
             if self.args.info:
                 self.show_info_and_exit()
 
-            self.run_stages()
+            asyncio.run(self.run_stages())
 
             print("\n" + "=" * 70)
             print(f"[OK] Pipeline completed successfully for {self.args.country}")

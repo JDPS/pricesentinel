@@ -59,47 +59,50 @@ def test_incomplete_electricity_fetcher_fails():
         IncompleteElectricityFetcher()
 
 
-def test_complete_electricity_fetcher_succeeds():
+@pytest.mark.asyncio
+async def test_complete_electricity_fetcher_succeeds():
     """Verify complete implementation succeeds."""
 
     class CompleteElectricityFetcher(ElectricityDataFetcher):
         """Complete implementation"""
 
-        def fetch_prices(self, start_date, end_date):
+        async def fetch_prices(self, start_date, end_date):
             return None
 
-        def fetch_load(self, start_date, end_date):
+        async def fetch_load(self, start_date, end_date):
             return None
 
     # Should not raise
     fetcher = CompleteElectricityFetcher()
-    assert fetcher.fetch_prices(None, None) is None
+    assert await fetcher.fetch_prices(None, None) is None
 
 
-def test_complete_weather_fetcher_succeeds():
+@pytest.mark.asyncio
+async def test_complete_weather_fetcher_succeeds():
     """Verify the complete weather fetcher implementation."""
 
     class CompleteWeatherFetcher(WeatherDataFetcher):
         """Complete implementation"""
 
-        def fetch_weather(self, start_date, end_date):
+        async def fetch_weather(self, start_date, end_date):
             return None
 
     fetcher = CompleteWeatherFetcher()
-    assert fetcher.fetch_weather(None, None) is None
+    assert await fetcher.fetch_weather(None, None) is None
 
 
-def test_complete_gas_fetcher_succeeds():
+@pytest.mark.asyncio
+async def test_complete_gas_fetcher_succeeds():
     """Verify the complete gas fetcher implementation."""
 
     class CompleteGasFetcher(GasDataFetcher):
         """Complete implementation"""
 
-        def fetch_prices(self, start_date, end_date):
+        async def fetch_prices(self, start_date, end_date):
             return None
 
     fetcher = CompleteGasFetcher()
-    assert fetcher.fetch_prices(None, None) is None
+    assert await fetcher.fetch_prices(None, None) is None
 
 
 def test_complete_event_provider_succeeds():

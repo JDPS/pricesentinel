@@ -7,6 +7,7 @@ Tests for Portugal-specific and shared data fetchers (with mocked HTTP).
 """
 
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
 import pytest
@@ -131,23 +132,11 @@ def test_open_meteo_fetcher_empty_coordinates_raises():
         OpenMeteoWeatherFetcher(cfg)
 
 
-def test_open_meteo_fetcher_parses_single_location(monkeypatch):
+@pytest.mark.asyncio
+async def test_open_meteo_fetcher_parses_single_location(monkeypatch):
     """
     Tests the OpenMeteoWeatherFetcher to ensure it correctly parses weather data
     for a single location using a mocked HTTP response.
-
-    Raises
-    ------
-    AssertionError
-        If the resulting DataFrame does not meet the expected structure, contents,
-        or column names during validation, an AssertionError is raised.
-
-    Parameters
-    ----------
-    monkeypatch : MonkeyPatch
-        A pytest-provided fixture used for dynamically modifying or replacing
-        parts of the system under test, in this case, monkey-patching the
-        HTTP GET request used by the weather fetcher.
     """
     cfg = DummyConfig()
     fetcher = OpenMeteoWeatherFetcher(cfg)  # type: ignore[arg-type]
@@ -165,46 +154,25 @@ def test_open_meteo_fetcher_parses_single_location(monkeypatch):
         }
     }
 
-    class DummyResponse:
-        """
-        Dummy Response
-        """
+    # Mock response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = response_json
 
-        @staticmethod
-        def raise_for_status():
-            return None
+    # Mock Client
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
 
-        def json(self):
-            return response_json
+    # Mock AsyncClient context manager
+    mock_client_cls = AsyncMock()
+    mock_client_cls.__aenter__.return_value = mock_client
+    mock_client_cls.__aexit__.return_value = None
 
-    def dummy_get(url, params=None, timeout=None):  # noqa: ARG001
-        """
-        Performs a simple GET request to the specified URL with optional query
-        parameters and timeout.
+    # Patch httpx.AsyncClient
+    monkeypatch.setattr("httpx.AsyncClient", lambda: mock_client_cls)
 
-        This function is a placeholder for performing HTTP GET requests and normally
-        would send a request to the specified URL. However, in this implementation,
-        it simply returns a dummy response object.
-
-        Parameters:
-            url: str
-                The URL to which the GET request should be sent.
-            params: dict, optional
-                A dictionary of query parameters to be included in the GET request.
-            timeout: float, optional
-                The maximum time (in seconds) to wait for a response.
-
-        Returns:
-            DummyResponse
-                A dummy response object that simulates the result of an HTTP GET
-                request.
-        """
-
-        return DummyResponse()
-
-    monkeypatch.setattr("data_fetchers.shared.open_meteo.requests.get", dummy_get)
-
-    df = fetcher.fetch_weather("2024-01-01", "2024-01-01")
+    df = await fetcher.fetch_weather("2024-01-01", "2024-01-01")
 
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 2
@@ -232,7 +200,8 @@ def test_portugal_event_provider_holidays(monkeypatch, tmp_path):
     assert "description" in df.columns
 
 
-def test_ttf_gas_fetcher_returns_empty_when_csv_missing(tmp_path):
+@pytest.mark.asyncio
+async def test_ttf_gas_fetcher_returns_empty_when_csv_missing(tmp_path):
     """TTFGasFetcher should return an empty DataFrame if CSV is missing."""
     cfg = DummyConfig()
     fetcher = TTFGasFetcher(cfg)  # type: ignore[arg-type]
@@ -240,14 +209,15 @@ def test_ttf_gas_fetcher_returns_empty_when_csv_missing(tmp_path):
     # Point to a non-existent CSV inside tmp_path
     fetcher.manual_csv_path = tmp_path / "missing_ttf.csv"  # type: ignore[assignment]
 
-    df = fetcher.fetch_prices("2024-01-01", "2024-01-31")
+    df = await fetcher.fetch_prices("2024-01-01", "2024-01-31")
 
     assert isinstance(df, pd.DataFrame)
     assert df.empty
     assert list(df.columns) == ["timestamp", "price_eur_mwh", "hub_name", "quality_flag"]
 
 
-def test_ttf_gas_fetcher_template_and_fetch(tmp_path, monkeypatch):
+@pytest.mark.asyncio
+async def test_ttf_gas_fetcher_template_and_fetch(tmp_path, monkeypatch):
     """TTFGasFetcher should create a template CSV and load filtered prices."""
     monkeypatch.chdir(tmp_path)
     cfg = DummyConfig()
@@ -257,7 +227,7 @@ def test_ttf_gas_fetcher_template_and_fetch(tmp_path, monkeypatch):
     fetcher.create_template_csv()
     assert fetcher.manual_csv_path.exists()
 
-    df = fetcher.fetch_prices("2023-01-01", "2023-01-07")
+    df = await fetcher.fetch_prices("2023-01-01", "2023-01-07")
 
     assert isinstance(df, pd.DataFrame)
     assert not df.empty

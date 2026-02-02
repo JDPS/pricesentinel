@@ -45,7 +45,7 @@ class TTFGasFetcher(GasDataFetcher):
 
         logger.debug(f"Initialized TTFGasFetcher for {self.country_code}")
 
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch daily TTF gas prices.
 

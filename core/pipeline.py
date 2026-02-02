@@ -16,10 +16,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from config.country_registry import ConfigLoader, FetcherFactory
+from config.country_registry import CountryConfig
 from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.features import FeatureEngineer
+from core.stages.fetch_stage import DataFetchStage
+from core.verification import DataVerifier
 from models import DEFAULT_MODEL_NAME, get_trainer
 
 logger = logging.getLogger(__name__)
@@ -40,31 +42,39 @@ class Pipeline:
     country registry, keeping the pipeline code generic.
     """
 
-    def __init__(self, country_code: str):
+    def __init__(
+        self,
+        country_code: str,
+        config: CountryConfig,
+        data_manager: CountryDataManager,
+        cleaner: DataCleaner,
+        feature_engineer: FeatureEngineer,
+        fetch_stage: DataFetchStage,
+        verifier: DataVerifier,
+    ):
         """
-        Initialise the pipeline for a specific country.
+        Initialise the pipeline with dependencies.
 
         Args:
-            country_code: ISO 3166-1 alpha-2 code (e.g. 'PT')
-
-        Raises:
-            ValueError: If the country is not registered,
-            FileNotFoundError: If country configuration doesn't exist
+            country_code: ISO 3166-1 alpha-2 code
+            config: Loaded country configuration
+            data_manager: Initialized data manager
+            cleaner: Initialized data cleaner
+            feature_engineer: Initialized feature engineer
+            fetch_stage: Initialized data fetch stage
+            verifier: Initialized data verifier
         """
         self.country_code = country_code.upper()
-        self.config = ConfigLoader.load_country_config(self.country_code)
-        self.fetchers = FetcherFactory.create_fetchers(self.country_code)
-        self.data_manager = CountryDataManager(self.country_code)
-        self.cleaner = DataCleaner(self.data_manager, self.country_code)
-        self.feature_engineer = FeatureEngineer(
-            self.country_code, features_config=self.config.features_config
-        )
+        self.config = config
+        self.data_manager = data_manager
+        self.cleaner = cleaner
+        self.feature_engineer = feature_engineer
+        self.fetch_stage = fetch_stage
+        self.verifier = verifier
+
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._last_start_date: str | None = None
         self._last_end_date: str | None = None
-
-        # Ensure directories exist
-        self.data_manager.create_directories()
 
         logger.info(f"Initialized pipeline for {self.country_code} (run_id: {self.run_id})")
 
@@ -91,9 +101,9 @@ class Pipeline:
         if start_dt > end_dt:
             raise ValueError("start_date must be before or equal to end_date")
 
-    def fetch_data(self, start_date: str, end_date: str) -> None:
+    async def fetch_data(self, start_date: str, end_date: str) -> None:
         """
-        Fetch all required data sources.
+        Fetch all required data sources concurrently.
 
         Args:
             start_date: Start date (YYYY-MM-DD)
@@ -103,119 +113,7 @@ class Pipeline:
         self._last_start_date = start_date
         self._last_end_date = end_date
 
-        logger.info(f"=== Stage 1: Fetching data for {self.country_code} ===")
-        logger.info(f"Date range: {start_date} to {end_date}")
-
-        # Fetch electricity prices
-        logger.info("Fetching electricity prices...")
-        self._fetch_and_store(
-            fetch_fn=self.fetchers["electricity"].fetch_prices,
-            dataset_key="electricity",
-            filename_prefix="electricity_prices",
-            start_date=start_date,
-            end_date=end_date,
-            empty_msg="No electricity price data fetched",
-            success_msg="Saved {count} electricity price records",
-        )
-
-        # Fetch electricity load
-        logger.info("Fetching electricity load...")
-        self._fetch_and_store(
-            fetch_fn=self.fetchers["electricity"].fetch_load,
-            dataset_key="electricity",
-            filename_prefix="electricity_load",
-            start_date=start_date,
-            end_date=end_date,
-            empty_msg="No electricity load data fetched",
-            success_msg="Saved {count} electricity load records",
-        )
-
-        # Fetch weather data
-        logger.info("Fetching weather data...")
-        self._fetch_and_store(
-            fetch_fn=self.fetchers["weather"].fetch_weather,
-            dataset_key="weather",
-            filename_prefix="weather",
-            start_date=start_date,
-            end_date=end_date,
-            empty_msg="No weather data fetched",
-            success_msg="Saved {count} weather records",
-        )
-
-        # Fetch gas prices
-        logger.info("Fetching gas prices...")
-        self._fetch_and_store(
-            fetch_fn=self.fetchers["gas"].fetch_prices,
-            dataset_key="gas",
-            filename_prefix="gas_prices",
-            start_date=start_date,
-            end_date=end_date,
-            empty_msg="No gas price data fetched",
-            success_msg="Saved {count} gas price records",
-        )
-
-        # Fetch events
-        logger.info("Fetching holidays and events...")
-        try:
-            holidays_df = self.fetchers["events"].get_holidays(start_date, end_date)
-
-            if len(holidays_df) > 0:
-                holidays_path = self.data_manager.get_events_path() / "holidays.csv"
-                holidays_df.to_csv(holidays_path, index=False)
-                logger.info("Saved %d holidays", len(holidays_df))
-            else:
-                logger.info("No holidays in date range")
-
-            manual_events_df = self.fetchers["events"].get_manual_events()
-            if len(manual_events_df) > 0:
-                manual_path = self.data_manager.get_events_path() / "manual_events.csv"
-                manual_events_df.to_csv(manual_path, index=False)
-                logger.info("Loaded %d manual events", len(manual_events_df))
-
-        except (FileNotFoundError, ValueError) as exc:
-            # Expected errors: missing files or invalid data formats.
-            logger.error("Failed to fetch events for %s: %s", self.country_code, exc)
-        except Exception:
-            # Unexpected errors should surface for debugging rather than be swallowed.
-            logger.exception("Unexpected error while fetching events for %s", self.country_code)
-            raise
-
-    def _fetch_and_store(
-        self,
-        fetch_fn,
-        dataset_key: str,
-        filename_prefix: str,
-        start_date: str,
-        end_date: str,
-        empty_msg: str,
-        success_msg: str,
-    ) -> None:
-        """
-        Fetches data using the specified fetch function and stores it in a file.
-
-        This method uses the provided fetch function to retrieve data between the given
-        start and end dates. If data is retrieved successfully and is not empty, it
-        saves the data to a CSV file at the specified location. Informational or error
-        messages are logged based on the outcome.
-        """
-        try:
-            df = fetch_fn(start_date, end_date)
-            if len(df) > 0:
-                filename = self.data_manager.generate_filename(
-                    filename_prefix, start_date, end_date
-                )
-                output_path = self.data_manager.get_raw_path(dataset_key) / filename
-                df.to_csv(output_path, index=False)
-                logger.info(success_msg.format(count=len(df)))
-            else:
-                logger.warning(empty_msg)
-        except (FileNotFoundError, ValueError) as exc:
-            logger.error("Failed to fetch %s for %s: %s", filename_prefix, self.country_code, exc)
-        except Exception:
-            logger.exception(
-                "Unexpected error while fetching %s for %s", filename_prefix, self.country_code
-            )
-            raise
+        await self.fetch_stage.run(start_date, end_date)
 
     def _ensure_dates_set(self) -> tuple[str, str]:
         """
@@ -252,6 +150,22 @@ class Pipeline:
         self.cleaner.clean_weather(start_date, end_date)
         self.cleaner.clean_gas(start_date, end_date)
         self.cleaner.clean_events(start_date, end_date)
+
+        # Verification
+        try:
+            prices_path = self.data_manager.get_processed_file_path(
+                "electricity_prices_clean", start_date, end_date
+            )
+            load_path = self.data_manager.get_processed_file_path(
+                "electricity_load_clean", start_date, end_date
+            )
+
+            prices_df = pd.read_csv(prices_path) if prices_path.exists() else None
+            load_df = pd.read_csv(load_path) if load_path.exists() else None
+
+            self.verifier.verify_electricity(prices_df, load_df)
+        except Exception as e:
+            logger.warning(f"Verification failed: {e}")
 
         logger.info("=== Stage 2 complete ===\n")
 
@@ -464,7 +378,7 @@ class Pipeline:
             self.generate_forecast(current.isoformat(), model_name=model_name)
             current = current.fromordinal(current.toordinal() + 1)
 
-    def run_full_pipeline(
+    async def run_full_pipeline(
         self,
         start_date: str,
         end_date: str,
@@ -489,7 +403,7 @@ class Pipeline:
 
         try:
             # Stage 1: Fetch data
-            self.fetch_data(start_date, end_date)
+            await self.fetch_data(start_date, end_date)
 
             # Stage 2: Clean and verify
             self.clean_and_verify(start_date, end_date)

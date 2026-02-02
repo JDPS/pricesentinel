@@ -19,7 +19,7 @@ Functions:
 import pytest
 
 from config.country_registry import CountryRegistry
-from core.pipeline import Pipeline
+from core.pipeline_builder import PipelineBuilder
 from data_fetchers.mock import register_mock_country
 
 
@@ -30,12 +30,13 @@ def mock_pipeline():
     """
     CountryRegistry.clear()
     register_mock_country()
-    pipeline = Pipeline(country_code="XX")
+    pipeline = PipelineBuilder.create_pipeline("XX")
     yield pipeline
     CountryRegistry.clear()
 
 
-def test_full_training_flow_mock_country(tmp_path, mock_pipeline, monkeypatch):
+@pytest.mark.asyncio
+async def test_full_training_flow_mock_country(tmp_path, mock_pipeline, monkeypatch):
     """
     End-to-end test: fetch -> clean -> features -> train for mock country.
     """
@@ -44,7 +45,7 @@ def test_full_training_flow_mock_country(tmp_path, mock_pipeline, monkeypatch):
     end_date = "2024-01-07"
 
     # Run stages explicitly to keep the test readable
-    mock_pipeline.fetch_data(start_date, end_date)
+    await mock_pipeline.fetch_data(start_date, end_date)
     mock_pipeline.clean_and_verify(start_date, end_date)
     mock_pipeline.engineer_features(start_date, end_date)
     mock_pipeline.train_model(start_date, end_date)

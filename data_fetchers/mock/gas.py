@@ -39,7 +39,7 @@ class MockGasFetcher(GasDataFetcher):
         self.hub_name = config.gas_config.get("hub_name", "MockHub")
         logger.debug(f"Initialized MockGasFetcher for {self.country_code}")
 
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Generate daily gas prices with realistic patterns.
 

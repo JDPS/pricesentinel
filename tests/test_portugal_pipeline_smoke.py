@@ -7,7 +7,7 @@ Smoke tests for the Portugal (PT) integration.
 """
 
 from config.country_registry import CountryRegistry, FetcherFactory
-from core.pipeline import Pipeline
+from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 from data_fetchers.portugal import PortugalElectricityFetcher, PortugalEventProvider
 from data_fetchers.shared.open_meteo import OpenMeteoWeatherFetcher
@@ -37,7 +37,7 @@ def test_pt_pipeline_initialisation_uses_portugal_config(tmp_path, monkeypatch):
     CountryRegistry.clear()
     auto_register_countries()
 
-    pipeline = Pipeline(country_code="PT")
+    pipeline = PipelineBuilder.create_pipeline("PT")
 
     assert pipeline.config.country_code == "PT"
     assert pipeline.config.country_name == "Portugal"
@@ -45,7 +45,7 @@ def test_pt_pipeline_initialisation_uses_portugal_config(tmp_path, monkeypatch):
     assert "PT" in pipeline.data_manager.base_path.parts
 
     # Ensure fetchers mapping is PT-specific
-    assert isinstance(pipeline.fetchers["electricity"], PortugalElectricityFetcher)
-    assert isinstance(pipeline.fetchers["weather"], OpenMeteoWeatherFetcher)
-    assert isinstance(pipeline.fetchers["gas"], TTFGasFetcher)
-    assert isinstance(pipeline.fetchers["events"], PortugalEventProvider)
+    assert isinstance(pipeline.fetch_stage.fetchers["electricity"], PortugalElectricityFetcher)
+    assert isinstance(pipeline.fetch_stage.fetchers["weather"], OpenMeteoWeatherFetcher)
+    assert isinstance(pipeline.fetch_stage.fetchers["gas"], TTFGasFetcher)
+    assert isinstance(pipeline.fetch_stage.fetchers["events"], PortugalEventProvider)

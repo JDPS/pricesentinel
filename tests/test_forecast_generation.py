@@ -11,7 +11,7 @@ import pytest
 
 from config.country_registry import CountryRegistry
 from core.data_manager import CountryDataManager
-from core.pipeline import Pipeline
+from core.pipeline_builder import PipelineBuilder
 from data_fetchers.mock import register_mock_country
 from models.sklearn_trainer import SklearnRegressorTrainer
 
@@ -22,7 +22,7 @@ def mock_country_pipeline(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     CountryRegistry.clear()
     register_mock_country()
-    pipeline = Pipeline(country_code="XX")
+    pipeline = PipelineBuilder.create_pipeline("XX")
     yield pipeline
     CountryRegistry.clear()
 

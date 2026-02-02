@@ -42,7 +42,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
         self.country_code = config.country_code
         logger.debug(f"Initialized MockElectricityFetcher for {self.country_code}")
 
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Generate hourly electricity prices with realistic patterns.
 
@@ -100,7 +100,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
 
         return df
 
-    def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Generate hourly load data with realistic patterns.
 
@@ -146,7 +146,7 @@ class MockElectricityFetcher(ElectricityDataFetcher):
 
         return df
 
-    def fetch_generation(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_generation(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Generate synthetic generation data (optional feature).
 

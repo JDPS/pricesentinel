@@ -1,0 +1,144 @@
+# Copyright (c) 2025 Soares
+#
+# SPDX-License-Identifier: Apache-2.0
+
+site_name: PriceSentinel
+site_description: Multi-country energy price forecasting with event awareness
+site_author: Soares
+site_url: https://jdps.github.io/pricesentinel
+
+repo_name: JDPS/pricesentinel
+repo_url: https://github.com/JDPS/pricesentinel
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2025 Soares
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            docstring_style: google
+            merge_init_into_class: true
+            show_signature_annotations: true
+            separate_signature: true
+
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Configuration: getting-started/configuration.md
+  - User Guide:
+      - Running the Pipeline: user-guide/running-pipeline.md
+      - Adding Countries: user-guide/adding-countries.md
+      - Data Fetchers: user-guide/data-fetchers.md
+      - Events and Calendars: user-guide/events.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Design Patterns: architecture/design-patterns.md
+      - Country Abstraction: architecture/country-abstraction.md
+  - API Reference:
+      - Core:
+          - Abstractions: api/core/abstractions.md
+          - Pipeline: api/core/pipeline.md
+          - Data Manager: api/core/data-manager.md
+      - Configuration:
+          - Registry: api/config/registry.md
+          - Validation: api/config/validation.md
+      - Data Fetchers:
+          - Portugal: api/data-fetchers/portugal.md
+          - Shared: api/data-fetchers/shared.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Testing: development/testing.md
+      - Troubleshooting: development/troubleshooting.md
+      - Release Process: development/releases.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/JDPS/pricesentinel
+  version:
+    provider: mike

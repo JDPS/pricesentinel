@@ -41,11 +41,12 @@ def test_mock_fetchers_creation(mock_country_setup):
     assert "events" in fetchers
 
 
-def test_mock_electricity_prices(mock_country_setup):
+@pytest.mark.asyncio
+async def test_mock_electricity_prices(mock_country_setup):
     """Test mock electricity price generation."""
     fetchers = FetcherFactory.create_fetchers("XX")
 
-    df = fetchers["electricity"].fetch_prices("2024-01-01", "2024-01-07")
+    df = await fetchers["electricity"].fetch_prices("2024-01-01", "2024-01-07")
 
     # Check DataFrame structure
     assert isinstance(df, pd.DataFrame)
@@ -62,11 +63,12 @@ def test_mock_electricity_prices(mock_country_setup):
     assert all(df["quality_flag"] == 0)
 
 
-def test_mock_electricity_load(mock_country_setup):
+@pytest.mark.asyncio
+async def test_mock_electricity_load(mock_country_setup):
     """Test mock electricity load generation."""
     fetchers = FetcherFactory.create_fetchers("XX")
 
-    df = fetchers["electricity"].fetch_load("2024-01-01", "2024-01-07")
+    df = await fetchers["electricity"].fetch_load("2024-01-01", "2024-01-07")
 
     assert isinstance(df, pd.DataFrame)
     assert "timestamp" in df.columns
@@ -75,11 +77,12 @@ def test_mock_electricity_load(mock_country_setup):
     assert df["load_mw"].min() > 0
 
 
-def test_mock_weather(mock_country_setup):
+@pytest.mark.asyncio
+async def test_mock_weather(mock_country_setup):
     """Test mock weather data generation."""
     fetchers = FetcherFactory.create_fetchers("XX")
 
-    df = fetchers["weather"].fetch_weather("2024-01-01", "2024-01-07")
+    df = await fetchers["weather"].fetch_weather("2024-01-01", "2024-01-07")
 
     assert isinstance(df, pd.DataFrame)
     assert "timestamp" in df.columns
@@ -95,11 +98,12 @@ def test_mock_weather(mock_country_setup):
     assert df["precipitation_mm"].min() >= 0
 
 
-def test_mock_gas_prices(mock_country_setup):
+@pytest.mark.asyncio
+async def test_mock_gas_prices(mock_country_setup):
     """Test mock gas price generation."""
     fetchers = FetcherFactory.create_fetchers("XX")
 
-    df = fetchers["gas"].fetch_prices("2024-01-01", "2024-01-07")
+    df = await fetchers["gas"].fetch_prices("2024-01-01", "2024-01-07")
 
     assert isinstance(df, pd.DataFrame)
     assert "timestamp" in df.columns
@@ -137,13 +141,14 @@ def test_mock_manual_events(mock_country_setup):
     assert "source" in df.columns
 
 
-def test_mock_data_reproducibility(mock_country_setup):
+@pytest.mark.asyncio
+async def test_mock_data_reproducibility(mock_country_setup):
     """Test that mock data is reproducible (same seed)."""
     fetchers1 = FetcherFactory.create_fetchers("XX")
     fetchers2 = FetcherFactory.create_fetchers("XX")
 
-    df1 = fetchers1["electricity"].fetch_prices("2024-01-01", "2024-01-07")
-    df2 = fetchers2["electricity"].fetch_prices("2024-01-01", "2024-01-07")
+    df1 = await fetchers1["electricity"].fetch_prices("2024-01-01", "2024-01-07")
+    df2 = await fetchers2["electricity"].fetch_prices("2024-01-01", "2024-01-07")
 
     # Should be identical
     pd.testing.assert_frame_equal(df1, df2)

@@ -24,7 +24,7 @@ class ElectricityDataFetcher(ABC):
     """
 
     @abstractmethod
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch day-ahead electricity prices.
 
@@ -42,7 +42,7 @@ class ElectricityDataFetcher(ABC):
         pass
 
     @abstractmethod
-    def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch actual load/demand data.
 
@@ -58,7 +58,7 @@ class ElectricityDataFetcher(ABC):
         """
         pass
 
-    def fetch_generation(self, start_date: str, end_date: str) -> pd.DataFrame | None:
+    async def fetch_generation(self, start_date: str, end_date: str) -> pd.DataFrame | None:
         """
         Fetch generation data by source (optional).
 
@@ -80,7 +80,7 @@ class WeatherDataFetcher(ABC):
     """
 
     @abstractmethod
-    def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_weather(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch weather data for configured locations.
 
@@ -109,7 +109,7 @@ class GasDataFetcher(ABC):
     """
 
     @abstractmethod
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch gas hub prices.
 

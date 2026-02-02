@@ -13,8 +13,8 @@ import logging
 import os
 from datetime import datetime, timedelta
 
+import httpx
 import pandas as pd
-import requests
 import xmltodict
 
 from core.abstractions import ElectricityDataFetcher
@@ -53,7 +53,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
 
         logger.debug(f"Initialized PortugalElectricityFetcher (domain: {self.domain})")
 
-    def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_prices(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch day-ahead electricity prices for Portugal.
 
@@ -65,7 +65,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             DataFrame with columns: timestamp, price_eur_mwh, market, quality_flag
 
         Raises:
-            requests.RequestException: If API request fails
+            httpx.RequestError: If API request fails
         """
         logger.info(f"Fetching electricity prices from {start_date} to {end_date}")
 
@@ -83,8 +83,9 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
         }
 
         try:
-            response = requests.get(self.BASE_URL, params=params, timeout=30)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(self.BASE_URL, params=params, timeout=30)
+                response.raise_for_status()
 
             # Parse XML response
             data = xmltodict.parse(response.content)
@@ -95,7 +96,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.info(f"Fetched {len(df)} price records")
             return df
 
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             error_msg = str(e)
             logger.error(f"Failed to fetch electricity prices: {e}")
 
@@ -119,7 +120,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             # Return empty DataFrame with the correct schema
             return pd.DataFrame(columns=["timestamp", "price_eur_mwh", "market", "quality_flag"])
 
-    def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
+    async def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
         Fetch actual load data for Portugal.
 
@@ -131,7 +132,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             DataFrame with columns: timestamp, load_mw, quality_flag
 
         Raises:
-            requests.RequestException: If API request fails
+            httpx.RequestError: If API request fails
         """
         logger.info(f"Fetching load data from {start_date} to {end_date}")
 
@@ -148,8 +149,9 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
         }
 
         try:
-            response = requests.get(self.BASE_URL, params=params, timeout=30)
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(self.BASE_URL, params=params, timeout=30)
+                response.raise_for_status()
 
             data = xmltodict.parse(response.content)
             df = self._parse_load_response(data)
@@ -157,7 +159,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.info(f"Fetched {len(df)} load records")
             return df
 
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             error_msg = str(e)
             logger.error(f"Failed to fetch load data: {e}")
 
