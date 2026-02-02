@@ -20,6 +20,7 @@ from config.country_registry import CountryConfig
 from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.features import FeatureEngineer
+from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
 from core.verification import DataVerifier
 from models import DEFAULT_MODEL_NAME, get_trainer
@@ -51,6 +52,7 @@ class Pipeline:
         feature_engineer: FeatureEngineer,
         fetch_stage: DataFetchStage,
         verifier: DataVerifier,
+        repository: DataRepository,
     ):
         """
         Initialise the pipeline with dependencies.
@@ -63,6 +65,7 @@ class Pipeline:
             feature_engineer: Initialized feature engineer
             fetch_stage: Initialized data fetch stage
             verifier: Initialized data verifier
+            repository: Initialized data repository
         """
         self.country_code = country_code.upper()
         self.config = config
@@ -71,6 +74,7 @@ class Pipeline:
         self.feature_engineer = feature_engineer
         self.fetch_stage = fetch_stage
         self.verifier = verifier
+        self.repository = repository
 
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._last_start_date: str | None = None
@@ -153,15 +157,13 @@ class Pipeline:
 
         # Verification
         try:
-            prices_path = self.data_manager.get_processed_file_path(
-                "electricity_prices_clean", start_date, end_date
+            # Use repository to load data
+            prices_df = self.repository.load_data(
+                "electricity_prices_clean", start_date, end_date, source="processed"
             )
-            load_path = self.data_manager.get_processed_file_path(
-                "electricity_load_clean", start_date, end_date
+            load_df = self.repository.load_data(
+                "electricity_load_clean", start_date, end_date, source="processed"
             )
-
-            prices_df = pd.read_csv(prices_path) if prices_path.exists() else None
-            load_df = pd.read_csv(load_path) if load_path.exists() else None
 
             self.verifier.verify_electricity(prices_df, load_df)
         except Exception as e:

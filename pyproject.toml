@@ -118,7 +118,7 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "-ra",
-    "--basetemp=.ptmp",
+    "--basetemp=.ptmp_new",
     "-p", "no:cacheprovider",
     "--ignore=tests/test_tasks.py",
 ]

@@ -16,6 +16,7 @@ from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.features import FeatureEngineer
 from core.pipeline import Pipeline
+from core.repository import CsvDataRepository
 from core.stages.fetch_stage import DataFetchStage
 from core.verification import DataVerifier
 
@@ -50,6 +51,7 @@ class PipelineBuilder:
         cleaner = DataCleaner(data_manager, country_code)
         feature_engineer = FeatureEngineer(country_code, features_config=config.features_config)
         verifier = DataVerifier(country_code)
+        repository = CsvDataRepository(data_manager)
 
         # 4. Create Stages
         fetch_stage = DataFetchStage(country_code, fetchers, data_manager)
@@ -63,6 +65,7 @@ class PipelineBuilder:
             feature_engineer=feature_engineer,
             fetch_stage=fetch_stage,
             verifier=verifier,
+            repository=repository,
         )
 
         logger.info(f"Built pipeline for {country_code}")

@@ -86,6 +86,7 @@ dev_ws/
 /train_protocol.md
 /tmp_pytest/
 .ptmp/
+.ptmp_new/
 *.txt
 /.hypothesis/
 /site/
