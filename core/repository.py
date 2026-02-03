@@ -47,6 +47,44 @@ class DataRepository(ABC):
         pass
 
     @abstractmethod
+    def save_raw_data(
+        self,
+        df: pd.DataFrame,
+        dataset_key: str,
+        filename_prefix: str,
+        start_date: str,
+        end_date: str,
+    ) -> Path:
+        """
+        Save raw data to a specific source directory with standardized naming.
+
+        Args:
+            df: DataFrame to save.
+            dataset_key: The raw source key (e.g., 'electricity', 'weather').
+            filename_prefix: The prefix for the filename (e.g., 'electricity_prices').
+            start_date: Start date string.
+            end_date: End date string.
+
+        Returns:
+            Path to the saved file.
+        """
+        pass
+
+    @abstractmethod
+    def save_event_data(self, df: pd.DataFrame, filename: str) -> Path:
+        """
+        Save event data to a specific filename in the events directory.
+
+        Args:
+            df: DataFrame to save.
+            filename: Exact filename to use (e.g. 'holidays.csv').
+
+        Returns:
+            Path to the saved file.
+        """
+        pass
+
+    @abstractmethod
     def load_data(
         self, name: str, start_date: str, end_date: str, source: str = "processed"
     ) -> pd.DataFrame | None:
@@ -99,6 +137,33 @@ class CsvDataRepository(DataRepository):
 
         df.to_csv(path, index=False)
         logger.debug(f"Saved data to {path}")
+        return path
+
+    def save_raw_data(
+        self,
+        df: pd.DataFrame,
+        dataset_key: str,
+        filename_prefix: str,
+        start_date: str,
+        end_date: str,
+    ) -> Path:
+        # Resolve path using data manager's logic for raw source subdirectories
+        filename = self.data_manager.generate_filename(filename_prefix, start_date, end_date)
+        # dataset_key maps to the subdirectory in raw/ (e.g. raw/electricity)
+        output_path = self.data_manager.get_raw_path(dataset_key) / filename
+
+        # Ensure parent exists (Repository should ensure storage is ready)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        df.to_csv(output_path, index=False)
+        logger.debug(f"Saved raw data to {output_path}")
+        return output_path
+
+    def save_event_data(self, df: pd.DataFrame, filename: str) -> Path:
+        path = self.data_manager.get_events_path() / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(path, index=False)
+        logger.debug(f"Saved event data to {path}")
         return path
 
     def load_data(

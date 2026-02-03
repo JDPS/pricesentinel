@@ -70,8 +70,10 @@ def test_pt_event_flags_reflect_manual_events_and_holidays(tmp_path, monkeypatch
     )
     manual_events.to_csv(manual_events_path, index=False)
 
-    engineer = FeatureEngineer("PT")
-    engineer.build_electricity_features(manager, start_date, end_date)
+    from core.repository import CsvDataRepository
+
+    engineer = FeatureEngineer("PT", repository=CsvDataRepository(manager))
+    engineer.build_electricity_features(start_date, end_date)
 
     features_path = manager.get_processed_file_path("electricity_features", start_date, end_date)
     features_df = pd.read_csv(features_path, parse_dates=["timestamp"])

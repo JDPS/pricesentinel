@@ -17,6 +17,7 @@ import logging
 import pandas as pd
 
 from core.data_manager import CountryDataManager
+from core.repository import DataRepository
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,11 @@ class DataCleaner:
     managed by CountryDataManager.
     """
 
-    def __init__(self, data_manager: CountryDataManager, country_code: str):
+    def __init__(
+        self, data_manager: CountryDataManager, repository: DataRepository, country_code: str
+    ):
         self.data_manager = data_manager
+        self.repository = repository
         self.country_code = country_code
 
     def _load_latest_raw(
@@ -52,33 +56,12 @@ class DataCleaner:
         It is intentionally simple and deterministic rather than optimised
         for very large numbers of files.
         """
-        pattern = f"*_{filename_prefix}_*.csv"
-        files = self.data_manager.list_files(source, pattern=pattern)
-
-        if not files:
-            logger.info("No raw files found for source=%s, prefix=%s", source, filename_prefix)
-            return None
-
-        # Read and concatenate all matching files. list_files() returns newest
-        # first; order does not matter once we sort by timestamp.
-        frames: list[pd.DataFrame] = []
-        for path in files:
-            logger.info("Loading raw file for %s/%s: %s", source, filename_prefix, path)
-            df = pd.read_csv(path, parse_dates=["timestamp"])
-            if df.empty:
-                continue
-
-            # Ensure timestamp is timezone-aware UTC
-            if df["timestamp"].dt.tz is None:
-                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
-            else:
-                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
-
-            frames.append(df)
+        # Use repository to load raw frames
+        frames = self.repository.load_matching_raw(source, filename_prefix)
 
         if not frames:
             logger.info(
-                "All raw files for source=%s, prefix=%s are empty after loading",
+                "All raw files for source=%s, prefix=%s are unlikely to contain data after loading",
                 source,
                 filename_prefix,
             )
@@ -111,12 +94,10 @@ class DataCleaner:
         )
 
         if prices_df is not None:
-            out_path = self.data_manager.get_processed_file_path(
-                "electricity_prices_clean", start_date, end_date
+            path = self.repository.save_data(
+                prices_df, "electricity_prices_clean", start_date, end_date
             )
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            prices_df.to_csv(out_path, index=False)
-            logger.info("Saved cleaned electricity prices to %s", out_path)
+            logger.info("Saved cleaned electricity prices to %s", path)
         else:
             logger.warning("No electricity price data to clean for %s", self.country_code)
 
@@ -129,12 +110,10 @@ class DataCleaner:
         )
 
         if load_df is not None:
-            out_path = self.data_manager.get_processed_file_path(
-                "electricity_load_clean", start_date, end_date
+            path = self.repository.save_data(
+                load_df, "electricity_load_clean", start_date, end_date
             )
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            load_df.to_csv(out_path, index=False)
-            logger.info("Saved cleaned electricity load to %s", out_path)
+            logger.info("Saved cleaned electricity load to %s", path)
         else:
             logger.warning("No electricity load data to clean for %s", self.country_code)
 
@@ -153,10 +132,8 @@ class DataCleaner:
             logger.warning("No weather data to clean for %s", self.country_code)
             return
 
-        out_path = self.data_manager.get_processed_file_path("weather_clean", start_date, end_date)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        weather_df.to_csv(out_path, index=False)
-        logger.info("Saved cleaned weather data to %s", out_path)
+        path = self.repository.save_data(weather_df, "weather_clean", start_date, end_date)
+        logger.info("Saved cleaned weather data to %s", path)
 
     def clean_gas(self, start_date: str, end_date: str) -> None:
         """
@@ -173,12 +150,8 @@ class DataCleaner:
             logger.warning("No gas price data to clean for %s", self.country_code)
             return
 
-        out_path = self.data_manager.get_processed_file_path(
-            "gas_prices_clean", start_date, end_date
-        )
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        gas_df.to_csv(out_path, index=False)
-        logger.info("Saved cleaned gas prices to %s", out_path)
+        path = self.repository.save_data(gas_df, "gas_prices_clean", start_date, end_date)
+        logger.info("Saved cleaned gas prices to %s", path)
 
     def clean_events(self, start_date: str, end_date: str) -> None:
         """
@@ -216,12 +189,13 @@ class DataCleaner:
             holidays_df = holidays_df.loc[mask].copy()
 
             if not holidays_df.empty:
-                out_path = self.data_manager.get_processed_file_path(
-                    "holidays_clean", start_date, end_date
+                path = self.repository.save_data(
+                    holidays_df.sort_values("timestamp"),
+                    "holidays_clean",
+                    start_date,
+                    end_date,
                 )
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                holidays_df.sort_values("timestamp").to_csv(out_path, index=False)
-                logger.info("Saved cleaned holidays to %s", out_path)
+                logger.info("Saved cleaned holidays to %s", path)
 
     def manual_events(self, manual_path, start_date, end_date):
         events_df = pd.read_csv(manual_path, parse_dates=["date_start", "date_end"])
@@ -240,9 +214,7 @@ class DataCleaner:
             events_df = events_df.loc[mask].copy()
 
             if not events_df.empty:
-                out_path = self.data_manager.get_processed_file_path(
-                    "manual_events_clean", start_date, end_date
+                path = self.repository.save_data(
+                    events_df, "manual_events_clean", start_date, end_date
                 )
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                events_df.to_csv(out_path, index=False)
-                logger.info("Saved cleaned manual events to %s", out_path)
+                logger.info("Saved cleaned manual events to %s", path)

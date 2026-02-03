@@ -13,6 +13,7 @@ import pytest
 
 from core.data_manager import CountryDataManager
 from core.features import FeatureEngineer
+from core.repository import CsvDataRepository
 from models.base import BaseTrainer
 
 
@@ -153,8 +154,8 @@ def test_build_electricity_features_with_optional_sources(tmp_path, monkeypatch)
     )
     manual_events.to_csv(manual_events_path, index=False)
 
-    engineer = FeatureEngineer("XX")
-    engineer.build_electricity_features(manager, start_date, end_date)
+    engineer = FeatureEngineer("XX", repository=CsvDataRepository(manager))
+    engineer.build_electricity_features(start_date, end_date)
 
     features_path = manager.get_processed_file_path("electricity_features", start_date, end_date)
     assert features_path.exists()
@@ -268,13 +269,14 @@ def test_build_electricity_features_respects_feature_toggles(tmp_path, monkeypat
 
     engineer = FeatureEngineer(
         "XX",
+        repository=CsvDataRepository(manager),
         features_config={
             "use_weather_features": False,
             "use_gas_features": False,
             "use_event_features": False,
         },
     )
-    engineer.build_electricity_features(manager, start_date, end_date)
+    engineer.build_electricity_features(start_date, end_date)
 
     features_path = manager.get_processed_file_path("electricity_features", start_date, end_date)
     features_df = pd.read_csv(features_path)
@@ -312,10 +314,9 @@ def test_train_with_trainer_uses_numeric_features_and_saves(tmp_path, monkeypatc
     df.to_csv(features_path, index=False)
 
     trainer = DummyTrainer(models_root=tmp_path / "models")
-    FeatureEngineer.train_with_trainer(
+    engineer = FeatureEngineer("XX", repository=CsvDataRepository(manager))
+    engineer.train_with_trainer(
         trainer=trainer,
-        data_manager=manager,
-        country_code="XX",
         run_id="run123",
         start_date=start_date,
         end_date=end_date,
@@ -352,11 +353,11 @@ def test_train_with_trainer_no_numeric_features_raises(tmp_path, monkeypatch):
 
     trainer = DummyTrainer(models_root=tmp_path / "models")
 
+    engineer = FeatureEngineer("XX", repository=CsvDataRepository(manager))
+
     with pytest.raises(ValueError, match="No numeric feature columns available for training"):
-        FeatureEngineer.train_with_trainer(
+        engineer.train_with_trainer(
             trainer=trainer,
-            data_manager=manager,
-            country_code="XX",
             run_id="run123",
             start_date=start_date,
             end_date=end_date,
@@ -387,10 +388,10 @@ def test_train_with_trainer_guardrail_can_skip_save(tmp_path, monkeypatch):
 
     trainer = BadMetricsTrainer(models_root=tmp_path / "models")
 
-    FeatureEngineer.train_with_trainer(
+    engineer = FeatureEngineer("XX", repository=CsvDataRepository(manager))
+
+    engineer.train_with_trainer(
         trainer=trainer,
-        data_manager=manager,
-        country_code="XX",
         run_id="run123",
         start_date=start_date,
         end_date=end_date,

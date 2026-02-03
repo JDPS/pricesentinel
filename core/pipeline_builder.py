@@ -48,13 +48,15 @@ class PipelineBuilder:
 
         # 3. Create Components
         fetchers = FetcherFactory.create_fetchers(country_code)
-        cleaner = DataCleaner(data_manager, country_code)
-        feature_engineer = FeatureEngineer(country_code, features_config=config.features_config)
-        verifier = DataVerifier(country_code)
         repository = CsvDataRepository(data_manager)
+        cleaner = DataCleaner(data_manager, repository, country_code)
+        feature_engineer = FeatureEngineer(
+            country_code, repository, features_config=config.features_config
+        )
+        verifier = DataVerifier(country_code)
 
         # 4. Create Stages
-        fetch_stage = DataFetchStage(country_code, fetchers, data_manager)
+        fetch_stage = DataFetchStage(country_code, fetchers, repository)
 
         # 5. Construct Pipeline
         pipeline = Pipeline(

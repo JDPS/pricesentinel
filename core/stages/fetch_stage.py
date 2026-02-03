@@ -11,7 +11,7 @@ Handles concurrent fetching of data from multiple sources.
 import asyncio
 import logging
 
-from core.data_manager import CountryDataManager
+from core.repository import DataRepository
 from core.stages.base import BaseStage
 
 logger = logging.getLogger(__name__)
@@ -25,10 +25,10 @@ class DataFetchStage(BaseStage):
     and gas prices, plus synchronous fetching of events.
     """
 
-    def __init__(self, country_code: str, fetchers: dict, data_manager: CountryDataManager):
+    def __init__(self, country_code: str, fetchers: dict, repository: DataRepository):
         super().__init__(country_code)
         self.fetchers = fetchers
-        self.data_manager = data_manager
+        self.repository = repository
 
     async def run(self, start_date: str, end_date: str) -> None:
         """
@@ -105,11 +105,9 @@ class DataFetchStage(BaseStage):
         try:
             df = await fetch_fn(start_date, end_date)
             if len(df) > 0:
-                filename = self.data_manager.generate_filename(
-                    filename_prefix, start_date, end_date
+                self.repository.save_raw_data(
+                    df, dataset_key, filename_prefix, start_date, end_date
                 )
-                output_path = self.data_manager.get_raw_path(dataset_key) / filename
-                df.to_csv(output_path, index=False)
                 logger.info(success_msg.format(count=len(df)))
             else:
                 logger.warning(empty_msg)
@@ -132,16 +130,14 @@ class DataFetchStage(BaseStage):
             holidays_df = self.fetchers["events"].get_holidays(start_date, end_date)
 
             if len(holidays_df) > 0:
-                holidays_path = self.data_manager.get_events_path() / "holidays.csv"
-                holidays_df.to_csv(holidays_path, index=False)
+                self.repository.save_event_data(holidays_df, "holidays.csv")
                 logger.info("Saved %d holidays", len(holidays_df))
             else:
                 logger.info("No holidays in date range")
 
             manual_events_df = self.fetchers["events"].get_manual_events()
             if len(manual_events_df) > 0:
-                manual_path = self.data_manager.get_events_path() / "manual_events.csv"
-                manual_events_df.to_csv(manual_path, index=False)
+                self.repository.save_event_data(manual_events_df, "manual_events.csv")
                 logger.info("Loaded %d manual events", len(manual_events_df))
 
         except (FileNotFoundError, ValueError) as exc:

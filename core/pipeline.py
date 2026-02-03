@@ -185,7 +185,7 @@ class Pipeline:
 
         self._validate_dates(start_date, end_date)
 
-        self.feature_engineer.build_electricity_features(self.data_manager, start_date, end_date)
+        self.feature_engineer.build_electricity_features(start_date, end_date)
 
         logger.info("=== Stage 3 complete ===\n")
 
@@ -211,8 +211,6 @@ class Pipeline:
         trainer = get_trainer(self.country_code, model_name=model_name)
         self.feature_engineer.train_with_trainer(
             trainer=trainer,
-            data_manager=self.data_manager,
-            country_code=self.country_code,
             run_id=self.run_id,
             start_date=start_date,
             end_date=end_date,

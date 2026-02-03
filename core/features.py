@@ -20,7 +20,7 @@ from collections.abc import Sequence
 
 import pandas as pd
 
-from core.data_manager import CountryDataManager
+from core.repository import DataRepository
 from models.base import BaseTrainer
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,14 @@ class FeatureEngineer:
     as an exogenous variable.
     """
 
-    def __init__(self, country_code: str, features_config: dict | None = None):
+    def __init__(
+        self,
+        country_code: str,
+        repository: DataRepository,
+        features_config: dict | None = None,
+    ):
         self.country_code = country_code
+        self.repository = repository
         # Raw dict from CountryConfig.features_config; use simple boolean flags.
         self._features_config = features_config or {}
 
@@ -50,48 +56,37 @@ class FeatureEngineer:
         value = self._features_config.get(flag, default)
         return bool(value)
 
-    @staticmethod
     def _load_cleaned(
-        data_manager: CountryDataManager,
+        self,
         name: str,
         start_date: str,
         end_date: str,
     ) -> pd.DataFrame | None:
-        """
-        Load a cleaned dataset by a logical name for a date range.
-        """
-        path = data_manager.get_processed_file_path(name, start_date, end_date)
+        df = self.repository.load_data(name, start_date, end_date, source="processed")
 
-        if not path.exists():
-            logger.warning("Cleaned data file not found: %s", path)
+        if df is None or df.empty:
             return None
 
-        df = pd.read_csv(path, parse_dates=["timestamp"])
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            if df["timestamp"].dt.tz is None:
+                df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
+            else:
+                df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
 
-        if df.empty:
-            logger.warning("Cleaned data file %s is empty", path)
-            return None
+            df = df.sort_values("timestamp").reset_index(drop=True)
 
-        if df["timestamp"].dt.tz is None:
-            df["timestamp"] = df["timestamp"].dt.tz_localize("UTC")
-        else:
-            df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
-
-        df = df.sort_values("timestamp").reset_index(drop=True)
         return df
 
     def build_electricity_features(
         self,
-        data_manager: CountryDataManager,
         start_date: str,
         end_date: str,
     ) -> None:
         """
         Build electricity price features for the given date range.
         """
-        prices_df = self._load_cleaned(
-            data_manager, "electricity_prices_clean", start_date, end_date
-        )
+        prices_df = self._load_cleaned("electricity_prices_clean", start_date, end_date)
 
         if prices_df is None:
             logger.warning(
@@ -100,7 +95,7 @@ class FeatureEngineer:
             )
             return
 
-        load_df = self._load_cleaned(data_manager, "electricity_load_clean", start_date, end_date)
+        load_df = self._load_cleaned("electricity_load_clean", start_date, end_date)
 
         df = prices_df.copy()
 
@@ -134,7 +129,7 @@ class FeatureEngineer:
 
         # Optional weather features (aggregated by timestamp)
         if self._is_enabled("use_weather_features", True):
-            weather_df = self._load_cleaned(data_manager, "weather_clean", start_date, end_date)
+            weather_df = self._load_cleaned("weather_clean", start_date, end_date)
             if weather_df is not None:
                 weather_agg = (
                     weather_df.groupby("timestamp")
@@ -150,7 +145,7 @@ class FeatureEngineer:
 
         # Optional gas price feature (daily, joined by date)
         if self._is_enabled("use_gas_features", True):
-            gas_df = self._load_cleaned(data_manager, "gas_prices_clean", start_date, end_date)
+            gas_df = self._load_cleaned("gas_prices_clean", start_date, end_date)
             if gas_df is not None and "price_eur_mwh" in gas_df.columns:
                 gas_df = gas_df.copy()
                 gas_df["date"] = gas_df["timestamp"].dt.normalize()
@@ -167,7 +162,7 @@ class FeatureEngineer:
         df["is_event"] = 0
 
         if self._is_enabled("use_event_features", True):
-            holidays_df = self._load_cleaned(data_manager, "holidays_clean", start_date, end_date)
+            holidays_df = self._load_cleaned("holidays_clean", start_date, end_date)
             if holidays_df is not None:
                 holidays_df = holidays_df.copy()
                 holidays_df["date"] = holidays_df["timestamp"].dt.normalize()
@@ -175,13 +170,22 @@ class FeatureEngineer:
                 df_dates = df["timestamp"].dt.normalize()
                 df.loc[df_dates.isin(holiday_dates), "is_holiday"] = 1
 
-            manual_events_path = data_manager.get_processed_file_path(
-                "manual_events_clean", start_date, end_date
-            )
-            if manual_events_path.exists():
-                events_df = pd.read_csv(manual_events_path, parse_dates=["date_start", "date_end"])
+            # Manual events
+            # Note: Using repository to load manual events as RAW processed data for now,
+            # or rely on `load_cleaned` if we saved them as "manual_events_clean"
+            events_df = self._load_cleaned("manual_events_clean", start_date, end_date)
 
-                if not events_df.empty:
+            if events_df is not None and not events_df.empty:
+                # Ensure date columns are parsed if repository didn't do it automatically enough
+                # (Repository load_data returns DF, usually we expect basic parsing, but for
+                # ranges we might need to check).
+                # Re-parse if needed or assume cleaned data is good.
+                # Since we saved it as Cleaned, let's assume it has proper dtypes or we cast.
+                # Actually, CSV lost timezone info if not careful, but cleaning standardized it.
+                if "date_start" in events_df.columns:
+                    events_df["date_start"] = pd.to_datetime(events_df["date_start"], utc=True)
+                    events_df["date_end"] = pd.to_datetime(events_df["date_end"], utc=True)
+
                     for _, row in events_df.iterrows():
                         mask = (df["timestamp"] >= row["date_start"]) & (
                             df["timestamp"] <= row["date_end"]
@@ -196,24 +200,18 @@ class FeatureEngineer:
         if "date" in df.columns:
             df = df.drop(columns=["date"])
 
-        features_path = data_manager.get_processed_file_path(
-            "electricity_features", start_date, end_date
-        )
-        features_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(features_path, index=False)
+        path = self.repository.save_data(df, "electricity_features", start_date, end_date)
 
         logger.info(
             "Saved electricity features for %s to %s (%d rows)",
             self.country_code,
-            features_path,
+            path,
             len(df),
         )
 
-    @staticmethod
     def train_with_trainer(
+        self,
         trainer: BaseTrainer,
-        data_manager: CountryDataManager,
-        country_code: str,
         run_id: str,
         start_date: str,
         end_date: str,
@@ -221,17 +219,15 @@ class FeatureEngineer:
         """
         Train the provided trainer using engineered electricity features.
         """
-        features_path = data_manager.get_processed_file_path(
-            "electricity_features", start_date, end_date
+        df = self.repository.load_data(
+            "electricity_features", start_date, end_date, source="processed"
         )
 
-        if not features_path.exists():
+        if df is None:
             raise ValueError(
-                f"Feature file not found for training: {features_path}. "
+                f"Feature file not found for training (start={start_date}, end={end_date}). "
                 f"Run engineer_features() first."
             )
-
-        df = pd.read_csv(features_path)
 
         if df.empty:
             raise ValueError("Feature file is empty; cannot train model")
@@ -263,7 +259,7 @@ class FeatureEngineer:
 
         logger.info(
             "Training %s: %d samples, %d features (train=%d, val=%d)",
-            country_code,
+            self.country_code,
             n_samples,
             x.shape[1],
             len(x_train),
@@ -283,7 +279,7 @@ class FeatureEngineer:
         if isinstance(train_mae, int | float) and train_mae > 1000:
             logger.warning(
                 "High train MAE detected for %s (%.3f) – check data and feature config",
-                country_code,
+                self.country_code,
                 train_mae,
             )
             bad_metrics = True
@@ -291,7 +287,7 @@ class FeatureEngineer:
         if isinstance(train_rmse, int | float) and train_rmse > 1000:
             logger.warning(
                 "High train RMSE detected for %s (%.3f) – check data and feature config",
-                country_code,
+                self.country_code,
                 train_rmse,
             )
             bad_metrics = True
@@ -303,15 +299,15 @@ class FeatureEngineer:
             logger.warning(
                 "Skipping model save for %s (run_id=%s) due to poor metrics "
                 "and PRICESENTINEL_SKIP_SAVE_ON_BAD_METRICS=1",
-                country_code,
+                self.country_code,
                 run_id,
             )
         else:
-            trainer.save(country_code, run_id, metrics=metrics)
+            trainer.save(self.country_code, run_id, metrics=metrics)
 
         logger.info(
             "Training complete for %s (%d samples). Metrics: %s",
-            country_code,
+            self.country_code,
             n_samples,
             metrics,
         )
