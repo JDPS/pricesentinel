@@ -118,7 +118,7 @@ addopts = [
     "--tb=short",
     "--strict-markers",
     "-ra",
-    "--basetemp=.ptmp_new",
+    "--basetemp=.pytest_temp_safe",
     "-p", "no:cacheprovider",
     "--ignore=tests/test_tasks.py",
 ]
@@ -131,7 +131,7 @@ markers = [
     "api: Tests that require external API access",
     "asyncio: Mark test as using asyncio",
 ]
-norecursedirs = [".git", ".venv", "venv", "env", "data", "logs", "outputs", "models"]
+norecursedirs = [".git", ".venv", "venv", "env", "data", "logs", "outputs", "models", ".hypothesis", ".pytest_temp_safe"]
 
 [tool.coverage.run]
 source = ["."]

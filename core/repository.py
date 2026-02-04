@@ -16,6 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 from core.data_manager import CountryDataManager
+from core.metadata_manager import MetadataManager
 
 logger = logging.getLogger(__name__)
 
@@ -161,8 +162,11 @@ class CsvDataRepository(DataRepository):
     Implementation of DataRepository using CSV files via CountryDataManager.
     """
 
-    def __init__(self, data_manager: CountryDataManager):
+    def __init__(
+        self, data_manager: CountryDataManager, metadata_manager: MetadataManager | None = None
+    ):
         self.data_manager = data_manager
+        self.metadata_manager = metadata_manager
 
     def save_data(
         self, df: pd.DataFrame, name: str, start_date: str, end_date: str, source: str = "processed"
@@ -177,6 +181,10 @@ class CsvDataRepository(DataRepository):
 
         df.to_csv(path, index=False)
         logger.debug(f"Saved data to {path}")
+
+        if self.metadata_manager:
+            self.metadata_manager.register_file(path, source, start_date, end_date, df)
+
         return path
 
     def save_raw_data(
@@ -197,6 +205,10 @@ class CsvDataRepository(DataRepository):
 
         df.to_csv(output_path, index=False)
         logger.debug(f"Saved raw data to {output_path}")
+
+        if self.metadata_manager:
+            self.metadata_manager.register_file(output_path, dataset_key, start_date, end_date, df)
+
         return output_path
 
     def save_event_data(self, df: pd.DataFrame, filename: str) -> Path:
@@ -204,6 +216,13 @@ class CsvDataRepository(DataRepository):
         path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(path, index=False)
         logger.debug(f"Saved event data to {path}")
+        # Metadata for events? Maybe "events" as source
+        if self.metadata_manager:
+            # For manual events/holidays, start/end date might be the
+            # whole file's range or irrelevant.
+            # We'll just pass empty strings if not applicable or extract from df if possible.
+            # But usually these are static files.
+            pass
         return path
 
     def load_event_data(self, filename: str) -> pd.DataFrame | None:

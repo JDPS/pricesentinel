@@ -39,8 +39,10 @@ ENV/
 # Data files (keep structure, ignore content)
 data/*/raw/*
 data/*/processed/*
+data/*/metadata/*
 !data/**/raw/.gitkeep
 !data/**/processed/.gitkeep
+!data/**/metadata/.gitkeep
 *.csv
 *.parquet
 *.pkl

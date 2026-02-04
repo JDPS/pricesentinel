@@ -15,6 +15,7 @@ from config.country_registry import ConfigLoader, FetcherFactory
 from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.features import FeatureEngineer
+from core.metadata_manager import MetadataManager
 from core.pipeline import Pipeline
 from core.repository import CsvDataRepository
 from core.stages.fetch_stage import DataFetchStage
@@ -48,7 +49,11 @@ class PipelineBuilder:
 
         # 3. Create Components
         fetchers = FetcherFactory.create_fetchers(country_code)
-        repository = CsvDataRepository(data_manager)
+
+        # Instantiate MetadataManager
+        metadata_manager = MetadataManager(data_manager.get_metadata_path())
+
+        repository = CsvDataRepository(data_manager, metadata_manager=metadata_manager)
         cleaner = DataCleaner(repository, country_code, timezone=config.timezone)
         feature_engineer = FeatureEngineer(
             country_code, repository, features_config=config.features_config
