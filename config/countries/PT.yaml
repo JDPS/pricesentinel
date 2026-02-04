@@ -6,7 +6,7 @@ timezone: Europe/Lisbon
 
 electricity:
   api_type: entsoe
-  entsoe_domain: 10YPT-REN------W  # Portugal EIC code
+  entsoe_domain: 10YPT-REN------W # Portugal EIC code
   market_type: day_ahead
 
 weather:
@@ -31,6 +31,10 @@ events:
 
 features:
   use_cross_border_flows: false
+  feature_windows:
+    lags: [1, 2, 24, 48, 168]
+    rolling_windows: [24, 168]
+    rolling_stats: ["mean", "std"]
   neighbors: []
   custom_feature_plugins: []
   use_weather_features: true
@@ -38,7 +42,7 @@ features:
   use_event_features: true
 
 validation:
-  price_min: -150.0  # PT historic min is slightly negative
-  price_max: 3000.0  # Cap
-  load_min: 2000.0   # Min load at night
-  load_max: 15000.0  # Max peak load
+  price_min: -150.0 # PT historic min is slightly negative
+  price_max: 3000.0 # Cap
+  load_min: 2000.0 # Min load at night
+  load_max: 15000.0 # Max peak load

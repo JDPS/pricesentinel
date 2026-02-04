@@ -50,10 +50,19 @@ class EventsConfig(TypedDict):
     manual_events_path: str
 
 
+class FeatureWindowConfig(TypedDict):
+    """Configuration for time-series feature windows."""
+
+    lags: list[int]
+    rolling_windows: list[int]
+    rolling_stats: list[Literal["mean", "std", "min", "max"]]
+
+
 class FeaturesConfig(TypedDict):
     """Feature engineering configuration."""
 
     use_cross_border_flows: bool
+    feature_windows: FeatureWindowConfig
 
 
 class ValidationLimits(TypedDict):

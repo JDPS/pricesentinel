@@ -104,10 +104,30 @@ class FeatureEngineer:
         # Target: next-hour price
         df["target_price"] = df["price_eur_mwh"].shift(-1)
 
-        # Price lags
-        lags: Sequence[int] = (1, 2, 24)
+        # Get feature windows config
+        windows_config = self._features_config.get("feature_windows", {})
+
+        # Lags
+        lags: Sequence[int] = windows_config.get("lags", [1, 2, 24])
         for lag in lags:
             df[f"price_lag_{lag}"] = df["price_eur_mwh"].shift(lag)
+
+        # Rolling features
+        windows: Sequence[int] = windows_config.get("rolling_windows", [])
+        stats: Sequence[str] = windows_config.get("rolling_stats", ["mean"])
+
+        for window in windows:
+            rolled = df["price_eur_mwh"].rolling(window=window)
+            for stat in stats:
+                col_name = f"price_rolling_{stat}_{window}"
+                if stat == "mean":
+                    df[col_name] = rolled.mean()
+                elif stat == "std":
+                    df[col_name] = rolled.std()
+                elif stat == "min":
+                    df[col_name] = rolled.min()
+                elif stat == "max":
+                    df[col_name] = rolled.max()
 
         # Calendar features
         df["hour"] = df["timestamp"].dt.hour
