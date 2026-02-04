@@ -12,12 +12,14 @@ from the ENTSO-E Transparency Platform API.
 import logging
 import os
 from datetime import datetime, timedelta
+from typing import Any
 
 import httpx
 import pandas as pd
 import xmltodict
 
 from core.abstractions import ElectricityDataFetcher
+from core.exceptions import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
         self.api_key = os.getenv("ENTSOE_API_KEY")
 
         if not self.api_key:
-            raise ValueError(
+            raise ConfigurationError(
                 "ENTSOE_API_KEY not found in environment variables.\n"
                 "Please set it in your .env file or environment."
             )
@@ -181,7 +183,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             freq = "1H"  # Default
         return freq
 
-    def _parse_price_response(self, xml_data: dict) -> pd.DataFrame:
+    def _parse_price_response(self, xml_data: dict[str, Any]) -> pd.DataFrame:
         """
         Parse ENTSO-E XML response for prices.
 
@@ -245,7 +247,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.error(f"Failed to parse price response: {e}")
             return pd.DataFrame(columns=["timestamp", "price_eur_mwh", "market", "quality_flag"])
 
-    def _parse_load_response(self, xml_data: dict) -> pd.DataFrame:
+    def _parse_load_response(self, xml_data: dict[str, Any]) -> pd.DataFrame:
         """
         Parse ENTSO-E XML response for load data.
 

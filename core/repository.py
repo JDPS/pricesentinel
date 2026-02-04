@@ -47,6 +47,33 @@ class DataRepository(ABC):
         pass
 
     @abstractmethod
+    def list_processed_data(self, pattern: str) -> list[Path]:
+        """
+        List processed data files matching a pattern.
+
+        Args:
+            pattern: Glob pattern to match files.
+
+        Returns:
+            List of matching file paths.
+        """
+        pass
+
+    @abstractmethod
+    def save_forecast(self, df: pd.DataFrame, filename: str) -> Path:
+        """
+        Save forecast data to the forecasts directory.
+
+        Args:
+            df: DataFrame to save.
+            filename: Filename for the forecast file.
+
+        Returns:
+            Path to the saved file.
+        """
+        pass
+
+    @abstractmethod
     def save_raw_data(
         self,
         df: pd.DataFrame,
@@ -81,6 +108,19 @@ class DataRepository(ABC):
 
         Returns:
             Path to the saved file.
+        """
+        pass
+
+    @abstractmethod
+    def load_event_data(self, filename: str) -> pd.DataFrame | None:
+        """
+        Load event data from a specific filename in the events directory.
+
+        Args:
+            filename: Exact filename to use (e.g. 'holidays.csv').
+
+        Returns:
+            DataFrame if file exists, None otherwise.
         """
         pass
 
@@ -164,6 +204,38 @@ class CsvDataRepository(DataRepository):
         path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(path, index=False)
         logger.debug(f"Saved event data to {path}")
+        return path
+
+    def load_event_data(self, filename: str) -> pd.DataFrame | None:
+        path = self.data_manager.get_events_path() / filename
+        if not path.exists():
+            return None
+
+        # We don't know the exact date columns here generically,
+        # so we rely on the caller or use standard pandas inference.
+        # For simplicity in this project context where this is only used for holidays/manual events:
+        try:
+            return pd.read_csv(path)
+        except Exception as e:
+            logger.warning(f"Failed to read event data from {path}: {e}")
+            return None
+
+    def list_processed_data(self, pattern: str) -> list[Path]:
+        processed_dir = self.data_manager.get_processed_path()
+        if not processed_dir.exists():
+            return []
+
+        # Sort by modification time, newest first
+        files = sorted(processed_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+        return files
+
+    def save_forecast(self, df: pd.DataFrame, filename: str) -> Path:
+        forecasts_dir = self.data_manager.get_processed_path() / "forecasts"
+        forecasts_dir.mkdir(parents=True, exist_ok=True)
+
+        path = forecasts_dir / filename
+        df.to_csv(path, index=False)
+        logger.debug(f"Saved forecast to {path}")
         return path
 
     def load_data(

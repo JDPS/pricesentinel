@@ -12,6 +12,7 @@ proper registration and retrieval of country-specific adapters.
 import pytest
 
 from config.country_registry import CountryRegistry
+from core.exceptions import ConfigurationError, CountryNotRegisteredError
 from data_fetchers.mock import (
     MockElectricityFetcher,
     MockEventProvider,
@@ -80,7 +81,7 @@ def test_list_countries(clean_registry):
 
 def test_missing_country_raises_error(clean_registry):
     """Test that requesting an unknown country raises error."""
-    with pytest.raises(ValueError, match="Country 'ZZ' not registered"):
+    with pytest.raises(CountryNotRegisteredError):
         CountryRegistry.get_adapters("ZZ")
 
 
@@ -102,7 +103,7 @@ def test_is_registered(clean_registry):
 
 def test_register_incomplete_adapters_fails(clean_registry):
     """Test that registering without all required adapters fails."""
-    with pytest.raises(ValueError, match="Missing required adapters"):
+    with pytest.raises(ConfigurationError):
         CountryRegistry.register(
             "BAD",
             {

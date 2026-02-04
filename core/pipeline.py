@@ -19,9 +19,11 @@ import pandas as pd
 from config.country_registry import CountryConfig
 from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
+from core.exceptions import DateRangeError
 from core.features import FeatureEngineer
 from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
+from core.types import PipelineInfo
 from core.verification import DataVerifier
 from models import DEFAULT_MODEL_NAME, get_trainer
 
@@ -98,12 +100,12 @@ class Pipeline:
             start_dt = date.fromisoformat(start_date)
             end_dt = date.fromisoformat(end_date)
         except ValueError as exc:
-            raise ValueError(
+            raise DateRangeError(
                 "Invalid date format. Expected YYYY-MM-DD for start_date and end_date"
             ) from exc
 
         if start_dt > end_dt:
-            raise ValueError("start_date must be before or equal to end_date")
+            raise DateRangeError("start_date must be before or equal to end_date")
 
     async def fetch_data(self, start_date: str, end_date: str) -> None:
         """
@@ -130,7 +132,7 @@ class Pipeline:
             ValueError: If dates have not been set by fetch_data.
         """
         if not self._last_start_date or not self._last_end_date:
-            raise ValueError(
+            raise DateRangeError(
                 "Date range not set. Call fetch_data(start_date, end_date) first "
                 "or provide dates explicitly to each stage."
             )
@@ -248,17 +250,13 @@ class Pipeline:
         logger.info("Forecast date: %s", forecast_date)
 
         # Find latest engineered feature file for this country
-        processed_dir = self.data_manager.get_processed_path()
         pattern = f"{self.country_code}_electricity_features_*.csv"
-        feature_files = sorted(
-            processed_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True
-        )
+        feature_files = self.repository.list_processed_data(pattern)
 
         if not feature_files:
             logger.warning(
-                "No electricity_features files found for %s under %s; skipping forecast",
+                "No electricity_features files found for %s; skipping forecast",
                 self.country_code,
-                processed_dir,
             )
             logger.info("=== Stage 5 skipped ===\n")
             return
@@ -341,13 +339,10 @@ class Pipeline:
                 features_path.name,
             )
 
-        forecasts_dir = self.data_manager.get_processed_path() / "forecasts"
-        forecasts_dir.mkdir(parents=True, exist_ok=True)
         out_name = (
             f"{self.country_code}_forecast_{forecast_date_dt.strftime('%Y%m%d')}_{model_name}.csv"
         )
-        out_path = forecasts_dir / out_name
-        filtered.to_csv(out_path, index=False)
+        out_path = self.repository.save_forecast(filtered, out_name)
 
         logger.info(
             "Saved %d forecast rows for %s to %s",
@@ -425,7 +420,7 @@ class Pipeline:
             logger.error(f"Pipeline failed: {e}", exc_info=True)
             raise
 
-    def get_info(self) -> dict:
+    def get_info(self) -> PipelineInfo:
         """
         Get information about the pipeline and data.
 

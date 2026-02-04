@@ -49,7 +49,7 @@ class PipelineBuilder:
         # 3. Create Components
         fetchers = FetcherFactory.create_fetchers(country_code)
         repository = CsvDataRepository(data_manager)
-        cleaner = DataCleaner(data_manager, repository, country_code)
+        cleaner = DataCleaner(repository, country_code)
         feature_engineer = FeatureEngineer(
             country_code, repository, features_config=config.features_config
         )

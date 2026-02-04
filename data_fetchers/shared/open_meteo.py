@@ -10,11 +10,15 @@ It's country-agnostic and configured via country configuration files.
 """
 
 import logging
+from typing import Any
 
 import httpx
 import pandas as pd
 
+from config.country_registry import CountryConfig
 from core.abstractions import WeatherDataFetcher
+from core.exceptions import APIError, ConfigurationError
+from core.types import WeatherLocation
 
 logger = logging.getLogger(__name__)
 
@@ -28,21 +32,24 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
 
     BASE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
-    def __init__(self, config):
+    def __init__(self, config: CountryConfig):
         """
         Initialise Open-Meteo weather fetcher.
 
         Args:
             config: CountryConfig instance with weather coordinates
+
+        Raises:
+            ConfigurationError: If weather coordinates are missing
         """
         self.country_code = config.country_code
         self.coordinates = config.weather_config.get("coordinates", [])
         self.timezone = config.timezone
 
         if not self.coordinates:
-            raise ValueError(
-                f"No weather coordinates configured for {self.country_code}.\n"
-                f"Please add coordinates in config/countries/{self.country_code}.yaml"
+            raise ConfigurationError(
+                f"No weather coordinates configured for {self.country_code}",
+                details={"country_code": self.country_code},
             )
 
         logger.debug(
@@ -62,7 +69,7 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
             DataFrame with weather data for all configured locations
 
         Raises:
-            requests.RequestException: If API request fails
+            APIError: If API request fails
         """
         logger.info(
             f"Fetching weather data from {start_date} to {end_date} "
@@ -79,8 +86,12 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
                     )
                     all_data.append(location_df)
 
-                except Exception as e:
+                except APIError as e:
                     logger.error(f"Failed to fetch weather for {coord['name']}: {e}")
+                    # Continue with other locations but log the specific API error
+
+                except Exception as e:
+                    logger.error(f"Unexpected error for {coord['name']}: {e}")
                     # Continue with other locations
 
         if not all_data:
@@ -103,20 +114,23 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
         return df
 
     async def _fetch_location_weather(
-        self, client: httpx.AsyncClient, coord: dict, start_date: str, end_date: str
+        self, client: httpx.AsyncClient, coord: WeatherLocation, start_date: str, end_date: str
     ) -> pd.DataFrame:
         """
         Fetch weather data for a single location.
 
         Args:
-            coord: Dictionary with 'name', 'lat', 'lon'
+            coord: WeatherLocation with 'name', 'lat', 'lon'
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
 
         Returns:
             DataFrame with weather data for the location
+
+        Raises:
+            APIError: If HTTP request fails
         """
-        params = {
+        params: dict[str, Any] = {
             "latitude": coord["lat"],
             "longitude": coord["lon"],
             "start_date": start_date,
@@ -125,10 +139,25 @@ class OpenMeteoWeatherFetcher(WeatherDataFetcher):
             "timezone": "UTC",  # Always fetch in UTC
         }
 
-        response = await client.get(self.BASE_URL, params=params, timeout=30)
-        response.raise_for_status()
+        try:
+            response = await client.get(self.BASE_URL, params=params, timeout=30)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise APIError(
+                f"Open-Meteo API error: {e.response.status_code}",
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+            ) from e
+        except httpx.RequestError as e:
+            raise APIError(f"Connection error to Open-Meteo: {str(e)}") from e
 
         data = response.json()
+
+        if "hourly" not in data:
+            raise APIError(
+                "Invalid response format from Open-Meteo: missing 'hourly' key",
+                response_body=str(data),
+            )
 
         # Extract hourly data
         hourly = data["hourly"]

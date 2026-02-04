@@ -13,6 +13,8 @@ import logging
 import os
 from pathlib import Path
 
+from core.types import DirectoryInfo
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,7 +78,7 @@ class CountryDataManager:
         """
         return self.base_path / "metadata"
 
-    def create_directories(self):
+    def create_directories(self) -> None:
         """
         Create all required directories for a country.
 
@@ -197,7 +199,7 @@ class CountryDataManager:
         logger.debug(f"Found latest file for {source}: {latest.name}")
         return latest
 
-    def list_files(self, source: str, pattern: str = "*") -> list:
+    def list_files(self, source: str, pattern: str = "*") -> list[Path]:
         """
         List all files for a given source.
 
@@ -233,20 +235,22 @@ class CountryDataManager:
 
         return total_size
 
-    def get_directory_info(self) -> dict:
+    def get_directory_info(self) -> DirectoryInfo:
         """
         Get information about the country data directory.
 
         Returns:
             Dictionary with directory statistics
         """
-        info = {
+        info: DirectoryInfo = {
             "country_code": self.country_code,
             "base_path": str(self.base_path),
-            "exists": self.base_path.exists(),
             "total_size_bytes": 0,
+            "total_size_mb": "0.00",
             "file_count": 0,
             "sources": {},
+            "created": "",  # Add missing required field
+            "exists": self.base_path.exists(),
         }
 
         if not self.base_path.exists():
@@ -278,7 +282,7 @@ class CountryDataManager:
         return f"CountryDataManager(country={self.country_code}, path={self.base_path})"
 
 
-def setup_country_directories(country_code: str, base_path: str = "data"):
+def setup_country_directories(country_code: str, base_path: str = "data") -> CountryDataManager:
     """
     Convenience function to set up directories for a new country.
 

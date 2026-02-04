@@ -17,10 +17,12 @@ Classes:
 import logging
 import os
 from collections.abc import Sequence
+from typing import Any, cast
 
 import pandas as pd
 
 from core.repository import DataRepository
+from core.types import FeaturesConfig
 from models.base import BaseTrainer
 
 logger = logging.getLogger(__name__)
@@ -38,12 +40,12 @@ class FeatureEngineer:
         self,
         country_code: str,
         repository: DataRepository,
-        features_config: dict | None = None,
+        features_config: FeaturesConfig | None = None,
     ):
         self.country_code = country_code
         self.repository = repository
         # Raw dict from CountryConfig.features_config; use simple boolean flags.
-        self._features_config = features_config or {}
+        self._features_config: dict[str, Any] = cast(dict[str, Any], features_config or {})
 
     def _is_enabled(self, flag: str, default: bool = True) -> bool:
         """

@@ -10,6 +10,7 @@ Handles concurrent fetching of data from multiple sources.
 
 import asyncio
 import logging
+from typing import Any
 
 from core.repository import DataRepository
 from core.stages.base import BaseStage
@@ -25,7 +26,7 @@ class DataFetchStage(BaseStage):
     and gas prices, plus synchronous fetching of events.
     """
 
-    def __init__(self, country_code: str, fetchers: dict, repository: DataRepository):
+    def __init__(self, country_code: str, fetchers: dict[str, Any], repository: DataRepository):
         super().__init__(country_code)
         self.fetchers = fetchers
         self.repository = repository
@@ -93,7 +94,7 @@ class DataFetchStage(BaseStage):
 
     async def _fetch_and_store(
         self,
-        fetch_fn,
+        fetch_fn: Any,
         dataset_key: str,
         filename_prefix: str,
         start_date: str,

@@ -16,7 +16,7 @@ from config.country_registry import CountryRegistry
 logger = logging.getLogger(__name__)
 
 
-def auto_register_countries():
+def auto_register_countries() -> None:
     """
     Automatically register all implemented countries.
 
@@ -44,9 +44,9 @@ def auto_register_countries():
             logger.debug("Mock country registration skipped; module unavailable.")
             return
 
-        register_mock_country()
+        register_mock_country()  # type: ignore[no-untyped-call]
     else:
-        register_mock_country()
+        register_mock_country()  # type: ignore[no-untyped-call]
         logger.info("Registered mock country (XX)")
 
     # Register Portugal
@@ -68,9 +68,9 @@ def auto_register_countries():
             logger.debug("Portugal registration skipped; module unavailable.")
             return
 
-        register_portugal()
+        register_portugal()  # type: ignore[no-untyped-call]
     else:
-        register_portugal()
+        register_portugal()  # type: ignore[no-untyped-call]
         logger.info("Registered Portugal (PT)")
 
     # Future countries will be registered here:

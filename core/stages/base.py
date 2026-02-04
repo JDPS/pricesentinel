@@ -22,6 +22,6 @@ class BaseStage(ABC):
         self.country_code = country_code
 
     @abstractmethod
-    async def run(self, *args, **kwargs) -> Any:
+    async def run(self, *args: Any, **kwargs: Any) -> Any:
         """Execute the stage logic."""
         pass

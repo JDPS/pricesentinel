@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 
 from config.country_registry import CountryConfig
+from core.exceptions import ConfigurationError
 from data_fetchers.portugal.electricity import PortugalElectricityFetcher
 from data_fetchers.portugal.events import HOLIDAYS_AVAILABLE, PortugalEventProvider
 from data_fetchers.shared.open_meteo import OpenMeteoWeatherFetcher
@@ -40,7 +41,7 @@ def test_portugal_electricity_fetcher_requires_api_key(monkeypatch):
     dummy_config = DummyConfig()
     monkeypatch.delenv("ENTSOE_API_KEY", raising=False)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationError):
         PortugalElectricityFetcher(dummy_config)
 
 
@@ -128,7 +129,7 @@ def test_open_meteo_fetcher_empty_coordinates_raises():
 
     cfg = CountryConfig(cfg_dict)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationError):
         OpenMeteoWeatherFetcher(cfg)
 
 

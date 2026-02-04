@@ -39,7 +39,7 @@ from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 
 
-def parse_arguments():
+def parse_arguments() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="PriceSentinel: Event-Aware Energy Price Forecasting",
@@ -124,7 +124,7 @@ Examples:
     return parser.parse_args()
 
 
-def validate_arguments(args):
+def validate_arguments(args: argparse.Namespace) -> bool:
     """
     Validate command-line arguments.
 
@@ -194,7 +194,7 @@ def validate_arguments(args):
 class PipelineCLI:
     """CLI runner for the PriceSentinel pipeline."""
 
-    def __init__(self, args):
+    def __init__(self, args: argparse.Namespace) -> None:
         import logging
 
         self.args = args
@@ -203,11 +203,11 @@ class PipelineCLI:
         # Pipeline is initialised later in init_pipeline
         self.pipeline: Pipeline | None = None
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         setup_logging(level=self.args.log_level)
 
     @staticmethod
-    def print_header():
+    def print_header() -> None:
         print("\n" + "=" * 70)
         print("PriceSentinel: Event-Aware Energy Price Forecasting")
         print("=" * 70 + "\n")
@@ -299,7 +299,7 @@ class PipelineCLI:
             else:
                 self.pipeline.generate_forecast(self.args.forecast_date, model_name=model_name)
 
-    def run(self):
+    def run(self) -> None:
         self.setup_logging()
         self.print_header()
         available_countries = self.register_countries()
@@ -330,7 +330,7 @@ class PipelineCLI:
             sys.exit(1)
 
 
-def main():
+def main() -> None:
     """Main entry point for the CLI."""
     args = parse_arguments()
 

@@ -16,7 +16,6 @@ import logging
 
 import pandas as pd
 
-from core.data_manager import CountryDataManager
 from core.repository import DataRepository
 
 logger = logging.getLogger(__name__)
@@ -31,10 +30,7 @@ class DataCleaner:
     managed by CountryDataManager.
     """
 
-    def __init__(
-        self, data_manager: CountryDataManager, repository: DataRepository, country_code: str
-    ):
-        self.data_manager = data_manager
+    def __init__(self, repository: DataRepository, country_code: str):
         self.repository = repository
         self.country_code = country_code
 
@@ -157,26 +153,28 @@ class DataCleaner:
         """
         Clean holidays and manual events.
         """
-        events_path = self.data_manager.get_events_path()
-
         # Holidays
-        holidays_path = events_path / "holidays.csv"
-        if holidays_path.exists():
-            self.holidays_events(holidays_path, start_date, end_date)
+        holidays_df = self.repository.load_event_data("holidays.csv")
+        if holidays_df is not None:
+            self.holidays_events(holidays_df, start_date, end_date)
         else:
-            logger.info("No holidays file found at %s", holidays_path)
+            logger.info("No holidays file found (checked for holidays.csv)")
 
         # Manual events
-        manual_path = events_path / "manual_events.csv"
-        if manual_path.exists():
-            self.manual_events(manual_path, start_date, end_date)
+        manual_df = self.repository.load_event_data("manual_events.csv")
+        if manual_df is not None:
+            self.manual_events(manual_df, start_date, end_date)
         else:
-            logger.info("No manual events file found at %s", manual_path)
+            logger.info("No manual events file found (checked for manual_events.csv)")
 
-    def holidays_events(self, holidays_path, start_date, end_date):
-        holidays_df = pd.read_csv(holidays_path, parse_dates=["timestamp"])
-
+    def holidays_events(self, holidays_df: pd.DataFrame, start_date: str, end_date: str) -> None:
         if not holidays_df.empty:
+            # Ensure timestamp is parsed (repo returns raw df)
+            if "timestamp" in holidays_df.columns and not pd.api.types.is_datetime64_any_dtype(
+                holidays_df["timestamp"]
+            ):
+                holidays_df["timestamp"] = pd.to_datetime(holidays_df["timestamp"])
+
             if holidays_df["timestamp"].dt.tz is None:
                 holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_localize("UTC")
             else:
@@ -197,11 +195,14 @@ class DataCleaner:
                 )
                 logger.info("Saved cleaned holidays to %s", path)
 
-    def manual_events(self, manual_path, start_date, end_date):
-        events_df = pd.read_csv(manual_path, parse_dates=["date_start", "date_end"])
-
+    def manual_events(self, events_df: pd.DataFrame, start_date: str, end_date: str) -> None:
         if not events_df.empty:
             for col in ["date_start", "date_end"]:
+                if col in events_df.columns and not pd.api.types.is_datetime64_any_dtype(
+                    events_df[col]
+                ):
+                    events_df[col] = pd.to_datetime(events_df[col])
+
                 if events_df[col].dt.tz is None:
                     events_df[col] = events_df[col].dt.tz_localize("UTC")
                 else:

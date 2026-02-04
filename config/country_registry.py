@@ -12,10 +12,20 @@ fetcher instances.
 
 import logging
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
 
 from config.adapter_registry import AdapterRegistry, get_default_registry
+from core.exceptions import ConfigurationError, CountryNotRegisteredError
+from core.types import (
+    CountryConfigDict,
+    ElectricityConfig,
+    EventsConfig,
+    FeaturesConfig,
+    GasConfig,
+    WeatherConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +40,29 @@ class CountryConfig:
     configuration parameters loaded from YAML files.
     """
 
-    def __init__(self, config_dict: dict):
+    def __init__(self, config_dict: CountryConfigDict):
         """
         Initialize CountryConfig from a dictionary.
 
         Args:
-            config_dict: dictionary containing country configuration
+            config_dict: TypedDict containing country configuration
         """
         self.country_code = config_dict["country_code"]
         self.country_name = config_dict.get("country_name", self.country_code)
         self.timezone = config_dict["timezone"]
-        self.electricity_config = config_dict.get("electricity", {})
-        self.weather_config = config_dict.get("weather", {})
-        self.gas_config = config_dict.get("gas", {})
-        self.events_config = config_dict.get("events", {})
-        self.features_config = config_dict.get("features", {})
+        self.electricity_config: ElectricityConfig = cast(
+            ElectricityConfig, cast(Any, config_dict.get("electricity", {}))
+        )
+        self.weather_config: WeatherConfig = cast(
+            WeatherConfig, cast(Any, config_dict.get("weather", {}))
+        )
+        self.gas_config: GasConfig = cast(GasConfig, cast(Any, config_dict.get("gas", {})))
+        self.events_config: EventsConfig = cast(
+            EventsConfig, cast(Any, config_dict.get("events", {}))
+        )
+        self.features_config: FeaturesConfig = cast(
+            FeaturesConfig, cast(Any, config_dict.get("features", {}))
+        )
 
     @classmethod
     def from_yaml(
@@ -78,14 +96,15 @@ class CountryConfig:
             )
 
         with open(config_path, encoding="utf-8") as f:
-            config_dict = yaml.safe_load(f)
+            # We assume the YAML matches the TypedDict structure
+            config_dict: CountryConfigDict = yaml.safe_load(f)
 
         # Validate required fields
         required_fields = ["country_code", "timezone"]
         missing_fields = [field for field in required_fields if field not in config_dict]
 
         if missing_fields:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Configuration for {country_code} is missing required fields: {missing_fields}"
             )
 
@@ -109,7 +128,7 @@ class CountryRegistry:
     """
 
     @classmethod
-    def register(cls, country_code: str, adapters: dict):
+    def register(cls, country_code: str, adapters: dict[str, Any]) -> None:
         """
         Register adapters for a country.
 
@@ -134,7 +153,9 @@ class CountryRegistry:
         missing_adapters = [key for key in required_adapters if key not in adapters]
 
         if missing_adapters:
-            raise ValueError(f"Missing required adapters for {country_code}: {missing_adapters}")
+            raise ConfigurationError(
+                f"Missing required adapters for {country_code}: {missing_adapters}"
+            )
 
         # Delegate to default registry
         registry = get_default_registry()
@@ -148,7 +169,7 @@ class CountryRegistry:
         logger.info(f"Registered country: {country_code}")
 
     @classmethod
-    def get_adapters(cls, country_code: str) -> dict:
+    def get_adapters(cls, country_code: str) -> dict[str, Any]:
         """
         Retrieve registered adapters for a country.
 
@@ -159,22 +180,17 @@ class CountryRegistry:
             dictionary of adapter classes
 
         Raises:
-            ValueError: If the country is not registered
+            CountryNotRegisteredError: If the country is not registered
         """
         registry = get_default_registry()
         try:
             return registry.get_adapters(country_code)
         except Exception as e:
-            # Re-raise as ValueError to match old interface
             available = registry.list_countries()
-            raise ValueError(
-                f"Country '{country_code}' not registered.\n"
-                f"Available countries: {available}\n"
-                f"Please register the country first or check the country code."
-            ) from e
+            raise CountryNotRegisteredError(country_code, available) from e
 
     @classmethod
-    def list_countries(cls) -> list:
+    def list_countries(cls) -> list[str]:
         """
         List all registered countries.
 
@@ -218,7 +234,7 @@ class FetcherFactory:
         country_code: str,
         config_dir: str = configure_directory,
         registry: AdapterRegistry | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Create fetcher instances for a country.
 

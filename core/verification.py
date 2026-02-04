@@ -64,7 +64,7 @@ class DataVerifier:
                 f"DataVerifier: Found {len(missing)} missing timestamps for {self.country_code} "
                 f"(freq={freq}). First missing: {missing[0]}"
             )
-            return missing.tolist()
+            return list(missing)
 
         return []
 
@@ -94,7 +94,9 @@ class DataVerifier:
 
         return failed_cols
 
-    def verify_electricity(self, prices_df: pd.DataFrame | None, load_df: pd.DataFrame | None):
+    def verify_electricity(
+        self, prices_df: pd.DataFrame | None, load_df: pd.DataFrame | None
+    ) -> None:
         """
         Run verification checks on electricity data.
         """

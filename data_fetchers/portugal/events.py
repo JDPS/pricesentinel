@@ -144,7 +144,7 @@ class PortugalEventProvider(EventDataProvider):
                 columns=["date_start", "date_end", "event_type", "description", "source"]
             )
 
-    def _create_manual_events_template(self):
+    def _create_manual_events_template(self) -> None:
         """Create a template manual events CSV file."""
         self.manual_events_path.parent.mkdir(parents=True, exist_ok=True)
 

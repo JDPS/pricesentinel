@@ -49,6 +49,7 @@ async def test_full_training_flow_mock_country(tmp_path, mock_pipeline, monkeypa
     mock_pipeline.clean_and_verify(start_date, end_date)
     mock_pipeline.engineer_features(start_date, end_date)
     mock_pipeline.train_model(start_date, end_date)
+    mock_pipeline.generate_forecast(forecast_date="2024-01-08")
 
     # Verify that a model artefact was created
     from pathlib import Path

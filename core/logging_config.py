@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def setup_logging(log_dir: str = "logs", level: str = "INFO", log_to_file: bool = True):
+def setup_logging(log_dir: str = "logs", level: str = "INFO", log_to_file: bool = True) -> None:
     """
     Configure logging for the entire application.
 

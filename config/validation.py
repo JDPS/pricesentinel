@@ -11,6 +11,7 @@ ensuring all required fields are present and have valid values.
 
 import re
 from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
@@ -178,7 +179,7 @@ class CountryConfigSchema(BaseModel):
     weather: WeatherConfig
     gas: GasConfig
     events: EventsConfig
-    features: FeaturesConfig = Field(default_factory=FeaturesConfig)
+    features: FeaturesConfig = Field(default_factory=lambda: FeaturesConfig())
 
     @field_validator("timezone")
     @classmethod
@@ -189,12 +190,12 @@ class CountryConfigSchema(BaseModel):
             raise ValueError(f"timezone must be in IANA format (e.g., Europe/Lisbon) got: {v}")
         return v
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return self.model_dump()
 
 
-def validate_country_config(config_dict: dict) -> CountryConfigSchema:
+def validate_country_config(config_dict: dict[str, Any]) -> CountryConfigSchema:
     """
     Validate a country configuration dictionary.
 
@@ -210,7 +211,7 @@ def validate_country_config(config_dict: dict) -> CountryConfigSchema:
     return CountryConfigSchema(**config_dict)
 
 
-def generate_config_template(country_code: str, country_name: str) -> dict:
+def generate_config_template(country_code: str, country_name: str) -> dict[str, Any]:
     """
     Generate a template configuration dictionary for a new country.
 
