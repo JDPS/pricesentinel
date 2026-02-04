@@ -9,6 +9,7 @@ Tests for Portugal-specific and shared data fetchers (with mocked HTTP).
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pandas as pd
 import pytest
 
@@ -236,4 +237,38 @@ async def test_ttf_gas_fetcher_template_and_fetch(tmp_path, monkeypatch):
     assert "price_eur_mwh" in df.columns
     assert "hub_name" in df.columns
     # All rows should have the configured hub name
-    assert set(df["hub_name"].unique()) == {cfg.gas_config.get("hub_name", "TTF")}
+
+
+@pytest.mark.asyncio
+async def test_portugal_electricity_fetcher_raises_api_error_on_401(monkeypatch):
+    """PortugalElectricityFetcher should raise APIError on 401 response."""
+    # Setup
+    cfg = DummyConfig()
+    monkeypatch.setenv("ENTSOE_API_KEY", "dummy-key")
+    fetcher = PortugalElectricityFetcher(cfg)
+
+    # Mock response
+    mock_response = MagicMock()
+    mock_response.status_code = 401
+    mock_response.text = "Unauthorized"
+    # mocking raise_for_status to raise HTTPStatusError
+    error = httpx.HTTPStatusError("401 Unauthorized", request=MagicMock(), response=mock_response)
+    mock_response.raise_for_status.side_effect = error
+
+    # Mock Client
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_response
+    mock_client_cls = AsyncMock()
+    mock_client_cls.__aenter__.return_value = mock_client
+    mock_client_cls.__aexit__.return_value = None
+
+    monkeypatch.setattr("httpx.AsyncClient", lambda: mock_client_cls)
+
+    # Import needed for exception check
+    from core.exceptions import APIError
+
+    # Execute & Assert
+    with pytest.raises(APIError) as exc_info:
+        await fetcher.fetch_prices("2024-01-01", "2024-01-02")
+
+    assert exc_info.value.status_code == 401

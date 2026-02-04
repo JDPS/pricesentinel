@@ -19,7 +19,7 @@ import pandas as pd
 import xmltodict
 
 from core.abstractions import ElectricityDataFetcher
-from core.exceptions import ConfigurationError
+from core.exceptions import APIError, ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             DataFrame with columns: timestamp, price_eur_mwh, market, quality_flag
 
         Raises:
-            httpx.RequestError: If API request fails
+            APIError: If API request fails
         """
         logger.info(f"Fetching electricity prices from {start_date} to {end_date}")
 
@@ -98,12 +98,12 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.info(f"Fetched {len(df)} price records")
             return df
 
-        except httpx.RequestError as e:
+        except httpx.HTTPStatusError as e:
             error_msg = str(e)
             logger.error(f"Failed to fetch electricity prices: {e}")
 
             # Provide helpful guidance for common errors
-            if "400" in error_msg:
+            if e.response.status_code == 400:
                 logger.warning(
                     "ENTSO-E API returned 400 Bad Request. Common causes:\n"
                     "  1. Historical data too old (try more recent dates)\n"
@@ -112,15 +112,22 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
                     f"  Requested period: {start_date} to {end_date}\n"
                     "  Suggestion: Try dates from the last 30 days"
                 )
-            elif "401" in error_msg or "403" in error_msg:
+            elif e.response.status_code in (401, 403):
                 logger.error(
                     "Authentication error. Please check_flag:\n"
                     "  1. ENTSOE_API_KEY is set correctly in .env\n"
                     "  2. API key is valid and not expired"
                 )
 
-            # Return empty DataFrame with the correct schema
-            return pd.DataFrame(columns=["timestamp", "price_eur_mwh", "market", "quality_flag"])
+            raise APIError(
+                f"ENTSO-E API error: {e.response.status_code}",
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+            ) from e
+
+        except httpx.RequestError as e:
+            logger.error(f"Connection error to ENTSO-E: {e}")
+            raise APIError(f"Connection error to ENTSO-E: {str(e)}") from e
 
     async def fetch_load(self, start_date: str, end_date: str) -> pd.DataFrame:
         """
@@ -134,7 +141,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             DataFrame with columns: timestamp, load_mw, quality_flag
 
         Raises:
-            httpx.RequestError: If API request fails
+            APIError: If API request fails
         """
         logger.info(f"Fetching load data from {start_date} to {end_date}")
 
@@ -161,19 +168,21 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
             logger.info(f"Fetched {len(df)} load records")
             return df
 
-        except httpx.RequestError as e:
-            error_msg = str(e)
-            logger.error(f"Failed to fetch load data: {e}")
-
-            # Provide helpful guidance for common errors
-            if "400" in error_msg:
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 400:
                 logger.warning(
                     "ENTSO-E API returned 400 Bad Request for load data.\n"
                     f"  Requested period: {start_date} to {end_date}\n"
                     "  Suggestion: Try dates from the last 30 days"
                 )
+            raise APIError(
+                f"ENTSO-E API error: {e.response.status_code}",
+                status_code=e.response.status_code,
+                response_body=e.response.text,
+            ) from e
 
-            return pd.DataFrame(columns=["timestamp", "load_mw", "quality_flag"])
+        except httpx.RequestError as e:
+            raise APIError(f"Connection error to ENTSO-E: {str(e)}") from e
 
     @staticmethod
     def _get_freq(f_resolution: str) -> str:
