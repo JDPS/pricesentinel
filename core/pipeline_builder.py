@@ -53,6 +53,11 @@ class PipelineBuilder:
         # Instantiate MetadataManager
         metadata_manager = MetadataManager(data_manager.get_metadata_path())
 
+        # Instantiate ModelRegistry
+        from models.model_registry import ModelRegistry
+
+        model_registry = ModelRegistry(models_root="models")
+
         repository = CsvDataRepository(data_manager, metadata_manager=metadata_manager)
         cleaner = DataCleaner(repository, country_code, timezone=config.timezone)
         feature_engineer = FeatureEngineer(
@@ -73,6 +78,7 @@ class PipelineBuilder:
             fetch_stage=fetch_stage,
             verifier=verifier,
             repository=repository,
+            model_registry=model_registry,
         )
 
         logger.info(f"Built pipeline for {country_code}")

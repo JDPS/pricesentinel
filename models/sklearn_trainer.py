@@ -17,9 +17,7 @@ Classes:
 
 from __future__ import annotations
 
-import json
 import logging
-import pickle
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +26,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from .base import BaseTrainer
+from .model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +36,13 @@ class SklearnRegressorTrainer(BaseTrainer):
     Baseline sklearn regressor trainer for price forecasting.
     """
 
-    def __init__(self, model_name: str = "baseline", models_root: str | Path = "models"):
-        super().__init__(model_name=model_name, models_root=models_root)
+    def __init__(
+        self,
+        model_name: str = "baseline",
+        models_root: str | Path = "models",
+        registry: ModelRegistry | None = None,
+    ):
+        super().__init__(model_name=model_name, models_root=models_root, registry=registry)
         # Lightweight "fast" mode for quick demo runs
         fast_mode = model_name.endswith("_fast")
         n_estimators = 50 if fast_mode else 100
@@ -97,16 +101,10 @@ class SklearnRegressorTrainer(BaseTrainer):
         if metrics is None:
             metrics = self.metrics
 
-        model_dir = self._model_dir(country_code, run_id)
-        model_dir.mkdir(parents=True, exist_ok=True)
-
-        model_path = model_dir / "model.pkl"
-        with open(model_path, "wb") as f:
-            pickle.dump(self.model, f)
-
-        metrics_path = model_dir / "metrics.json"
-        with open(metrics_path, "w", encoding="utf-8") as f:
-            json.dump(metrics, f, indent=2)
-
-        logger.info("Saved model to %s", model_path)
-        logger.info("Saved metrics to %s", metrics_path)
+        self.registry.save_model(
+            country_code=country_code,
+            model_name=self.model_name,
+            run_id=run_id,
+            model=self.model,
+            metrics=metrics,
+        )

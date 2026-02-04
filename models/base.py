@@ -22,15 +22,23 @@ from pathlib import Path
 
 import pandas as pd
 
+from .model_registry import ModelRegistry
+
 
 class BaseTrainer(ABC):
     """
     Base interface for model trainers.
     """
 
-    def __init__(self, model_name: str, models_root: str | Path = "models"):
+    def __init__(
+        self,
+        model_name: str,
+        models_root: str | Path = "models",
+        registry: ModelRegistry | None = None,
+    ):
         self.model_name = model_name
         self.models_root = Path(models_root)
+        self.registry = registry or ModelRegistry(models_root)
 
     @abstractmethod
     def train(

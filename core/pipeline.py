@@ -10,9 +10,8 @@ of the forecasting workflow while remaining completely country-agnostic.
 """
 
 import logging
-import pickle
 from datetime import date, datetime
-from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -55,6 +54,7 @@ class Pipeline:
         fetch_stage: DataFetchStage,
         verifier: DataVerifier,
         repository: DataRepository,
+        model_registry: Any = None,  # Avoid circular import, initialized in builder
     ):
         """
         Initialise the pipeline with dependencies.
@@ -68,6 +68,7 @@ class Pipeline:
             fetch_stage: Initialized data fetch stage
             verifier: Initialized data verifier
             repository: Initialized data repository
+            model_registry: Initialized model registry
         """
         self.country_code = country_code.upper()
         self.config = config
@@ -77,6 +78,13 @@ class Pipeline:
         self.fetch_stage = fetch_stage
         self.verifier = verifier
         self.repository = repository
+
+        # Lazy import to avoid circular dependency if strictly typed,
+        # or rely on builder to pass it.
+        # Since we just use it in methods, storing Any is safe for runtime.
+        from models.model_registry import ModelRegistry
+
+        self.model_registry = model_registry or ModelRegistry()
 
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._last_start_date: str | None = None
@@ -280,23 +288,26 @@ class Pipeline:
             logger.info("=== Stage 5 skipped ===\n")
             return
 
-        # Locate trained model
-        models_root = Path("models")
-        model_dir = models_root / self.country_code / model_name / self.run_id
-        model_path = model_dir / "model.pkl"
+        if x.empty or x.shape[1] == 0:
+            logger.warning("No numeric feature columns available for forecast; skipping")
+            logger.info("=== Stage 5 skipped ===\n")
+            return
 
-        if not model_path.exists():
+        # Load model using Registry
+        try:
+            model, _ = self.model_registry.load_model(
+                self.country_code, model_name, run_id=self.run_id
+            )
+            logger.info(f"Loaded model {model_name} for run_id {self.run_id}")
+        except FileNotFoundError:
             logger.warning(
-                "Model for run_id %s not found at %s; attempting to use most recent model",
+                "Model for run_id %s not found; attempting to use latest model",
                 self.run_id,
-                model_path,
             )
-            # Fallback: newest model.pkl under models/{country}/{model_name}
-            candidate_root = models_root / self.country_code / model_name
-            candidate_models = (
-                list(candidate_root.glob("*/model.pkl")) if candidate_root.exists() else []
-            )
-            if not candidate_models:
+            try:
+                model, meta = self.model_registry.load_model(self.country_code, model_name)
+                logger.info(f"Using latest available model (run_id={meta.get('run_id')})")
+            except FileNotFoundError:
                 logger.warning(
                     "No trained models found for %s/%s; cannot generate forecast",
                     self.country_code,
@@ -304,13 +315,6 @@ class Pipeline:
                 )
                 logger.info("=== Stage 5 skipped ===\n")
                 return
-            candidate_models.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-            model_path = candidate_models[0]
-            logger.info("Using latest available model for forecast: %s", model_path)
-
-        with open(model_path, "rb") as f:
-            # Model files are produced by this application; do not load untrusted artefacts.
-            model = pickle.load(f)  # noqa: S301
 
         # Predict next-hour prices; align forecast timestamp as t+1h
         preds = model.predict(x)
