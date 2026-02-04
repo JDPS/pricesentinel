@@ -49,11 +49,11 @@ class PipelineBuilder:
         # 3. Create Components
         fetchers = FetcherFactory.create_fetchers(country_code)
         repository = CsvDataRepository(data_manager)
-        cleaner = DataCleaner(repository, country_code)
+        cleaner = DataCleaner(repository, country_code, timezone=config.timezone)
         feature_engineer = FeatureEngineer(
             country_code, repository, features_config=config.features_config
         )
-        verifier = DataVerifier(country_code)
+        verifier = DataVerifier(country_code, validation_config=config.validation_config)
 
         # 4. Create Stages
         fetch_stage = DataFetchStage(country_code, fetchers, repository)

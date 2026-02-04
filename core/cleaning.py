@@ -17,6 +17,7 @@ import logging
 import pandas as pd
 
 from core.repository import DataRepository
+from core.time_normalizer import TimeNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,11 @@ class DataCleaner:
     managed by CountryDataManager.
     """
 
-    def __init__(self, repository: DataRepository, country_code: str):
+    def __init__(self, repository: DataRepository, country_code: str, timezone: str = "UTC"):
         self.repository = repository
         self.country_code = country_code
+        self.timezone = timezone
+        self.normalizer = TimeNormalizer(timezone)
 
     def _load_latest_raw(
         self,
@@ -65,8 +68,11 @@ class DataCleaner:
 
         df = pd.concat(frames, ignore_index=True)
 
-        start = pd.to_datetime(start_date, utc=True)
-        end = pd.to_datetime(end_date, utc=True)
+        # Normalize timestamps to UTC using TimeNormalizer
+        df = self.normalizer.normalize_to_utc(df, col_name="timestamp")
+
+        start = pd.Timestamp(start_date).tz_localize("UTC")
+        end = pd.Timestamp(end_date).tz_localize("UTC") + pd.Timedelta(days=1)
 
         mask = (df["timestamp"] >= start) & (df["timestamp"] <= end)
         df = df.loc[mask].copy()
@@ -74,6 +80,7 @@ class DataCleaner:
         if df.empty:
             return None
 
+        # Sort and Drop duplicates (TimeNormalizer.handle_dst_transitions placeholder logic)
         df = df.sort_values("timestamp").drop_duplicates("timestamp").reset_index(drop=True)
         return df
 
@@ -169,19 +176,11 @@ class DataCleaner:
 
     def holidays_events(self, holidays_df: pd.DataFrame, start_date: str, end_date: str) -> None:
         if not holidays_df.empty:
-            # Ensure timestamp is parsed (repo returns raw df)
-            if "timestamp" in holidays_df.columns and not pd.api.types.is_datetime64_any_dtype(
-                holidays_df["timestamp"]
-            ):
-                holidays_df["timestamp"] = pd.to_datetime(holidays_df["timestamp"])
+            # Normalize timestamps
+            holidays_df = self.normalizer.normalize_to_utc(holidays_df, col_name="timestamp")
 
-            if holidays_df["timestamp"].dt.tz is None:
-                holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_localize("UTC")
-            else:
-                holidays_df["timestamp"] = holidays_df["timestamp"].dt.tz_convert("UTC")
-
-            start = pd.to_datetime(start_date, utc=True)
-            end = pd.to_datetime(end_date, utc=True)
+            start = pd.Timestamp(start_date).tz_localize("UTC")
+            end = pd.Timestamp(end_date).tz_localize("UTC") + pd.Timedelta(days=1)
 
             mask = (holidays_df["timestamp"] >= start) & (holidays_df["timestamp"] <= end)
             holidays_df = holidays_df.loc[mask].copy()
@@ -197,19 +196,12 @@ class DataCleaner:
 
     def manual_events(self, events_df: pd.DataFrame, start_date: str, end_date: str) -> None:
         if not events_df.empty:
+            # Normalize start and end
             for col in ["date_start", "date_end"]:
-                if col in events_df.columns and not pd.api.types.is_datetime64_any_dtype(
-                    events_df[col]
-                ):
-                    events_df[col] = pd.to_datetime(events_df[col])
+                events_df = self.normalizer.normalize_to_utc(events_df, col_name=col)
 
-                if events_df[col].dt.tz is None:
-                    events_df[col] = events_df[col].dt.tz_localize("UTC")
-                else:
-                    events_df[col] = events_df[col].dt.tz_convert("UTC")
-
-            start = pd.to_datetime(start_date, utc=True)
-            end = pd.to_datetime(end_date, utc=True)
+            start = pd.Timestamp(start_date).tz_localize("UTC")
+            end = pd.Timestamp(end_date).tz_localize("UTC") + pd.Timedelta(days=1)
 
             mask = (events_df["date_end"] >= start) & (events_df["date_start"] <= end)
             events_df = events_df.loc[mask].copy()

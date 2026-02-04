@@ -36,3 +36,9 @@ features:
   use_weather_features: true
   use_gas_features: true
   use_event_features: true
+
+validation:
+  price_min: -150.0  # PT historic min is slightly negative
+  price_max: 3000.0  # Cap
+  load_min: 2000.0   # Min load at night
+  load_max: 15000.0  # Max peak load

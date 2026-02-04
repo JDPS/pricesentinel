@@ -56,6 +56,15 @@ class FeaturesConfig(TypedDict):
     use_cross_border_flows: bool
 
 
+class ValidationLimits(TypedDict):
+    """Data validation limits."""
+
+    price_min: float
+    price_max: float
+    load_min: float
+    load_max: float
+
+
 class CountryConfigDict(TypedDict):
     """Complete country configuration."""
 
@@ -67,6 +76,7 @@ class CountryConfigDict(TypedDict):
     gas: GasConfig
     events: EventsConfig
     features: FeaturesConfig
+    validation: ValidationLimits
 
 
 class DirectoryInfo(TypedDict):

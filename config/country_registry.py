@@ -24,6 +24,7 @@ from core.types import (
     EventsConfig,
     FeaturesConfig,
     GasConfig,
+    ValidationLimits,
     WeatherConfig,
 )
 
@@ -62,6 +63,9 @@ class CountryConfig:
         )
         self.features_config: FeaturesConfig = cast(
             FeaturesConfig, cast(Any, config_dict.get("features", {}))
+        )
+        self.validation_config: ValidationLimits = cast(
+            ValidationLimits, cast(Any, config_dict.get("validation", {}))
         )
 
     @classmethod

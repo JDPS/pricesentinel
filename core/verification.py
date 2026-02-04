@@ -13,6 +13,8 @@ import logging
 
 import pandas as pd
 
+from core.types import ValidationLimits
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,8 +23,15 @@ class DataVerifier:
     Verifies data quality for cleaned datasets.
     """
 
-    def __init__(self, country_code: str):
+    def __init__(self, country_code: str, validation_config: ValidationLimits | None = None):
         self.country_code = country_code
+        # Default limits if none provided
+        self.validation_config: ValidationLimits = validation_config or {
+            "price_min": -500.0,
+            "price_max": 4000.0,
+            "load_min": 0.0,
+            "load_max": 100000.0,
+        }
 
     def check_gaps(self, df: pd.DataFrame, freq: str = "h") -> list[pd.Timestamp]:
         """
@@ -48,11 +57,6 @@ class DataVerifier:
 
         start = timestamps.iloc[0]
         end = timestamps.iloc[-1]
-
-        # Determine expected frequency alias for pandas
-        # 'h' is deprecated for 'h', use 'h' or 'H' depending on pandas version,
-        # usually 'h' is fine or 'ME' etc.
-        # To be safe, we rely on the passed freq.
 
         expected_range = pd.date_range(start=start, end=end, freq=freq)
 
@@ -94,6 +98,31 @@ class DataVerifier:
 
         return failed_cols
 
+    def check_limits(self, df: pd.DataFrame, col: str, min_val: float, max_val: float) -> bool:
+        """
+        Check if values in a column are within specified limits.
+
+        Args:
+            df: DataFrame to check.
+            col: Column name.
+            min_val: Minimum allowed value.
+            max_val: Maximum allowed value.
+
+        Returns:
+            False if violations found, True otherwise.
+        """
+        if df.empty or col not in df.columns:
+            return True
+
+        violations = df[(df[col] < min_val) | (df[col] > max_val)]
+        if not violations.empty:
+            logger.warning(
+                f"DataVerifier: Found {len(violations)} values outside limits "
+                f"[{min_val}, {max_val}] in column '{col}' for {self.country_code}."
+            )
+            return False
+        return True
+
     def verify_electricity(
         self, prices_df: pd.DataFrame | None, load_df: pd.DataFrame | None
     ) -> None:
@@ -102,8 +131,21 @@ class DataVerifier:
         """
         if prices_df is not None:
             self.check_gaps(prices_df, freq="h")
-            # Prices can be negative, so we don't check for that usually (unless configured)
+            # Check price limits
+            self.check_limits(
+                prices_df,
+                "price_eur_mwh",
+                self.validation_config["price_min"],
+                self.validation_config["price_max"],
+            )
 
         if load_df is not None:
             self.check_gaps(load_df, freq="h")
             self.check_negative_values(load_df, ["load_mw"])
+            # Check load limits
+            self.check_limits(
+                load_df,
+                "load_mw",
+                self.validation_config["load_min"],
+                self.validation_config["load_max"],
+            )
