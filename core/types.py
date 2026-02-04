@@ -19,6 +19,7 @@ class ElectricityConfig(TypedDict):
 
     api_type: Literal["entsoe", "mock"]
     entsoe_domain: str
+    market_type: str
 
 
 class WeatherLocation(TypedDict):
@@ -63,6 +64,11 @@ class FeaturesConfig(TypedDict):
 
     use_cross_border_flows: bool
     feature_windows: FeatureWindowConfig
+    use_weather_features: bool
+    use_gas_features: bool
+    use_event_features: bool
+    neighbors: list[str]
+    custom_feature_plugins: list[str]
 
 
 class ValidationLimits(TypedDict):

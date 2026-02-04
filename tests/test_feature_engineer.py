@@ -271,9 +271,17 @@ def test_build_electricity_features_respects_feature_toggles(tmp_path, monkeypat
         "XX",
         repository=CsvDataRepository(manager),
         features_config={
+            "use_cross_border_flows": False,
+            "feature_windows": {
+                "lags": [1, 2, 24],
+                "rolling_windows": [],
+                "rolling_stats": ["mean"],
+            },
             "use_weather_features": False,
             "use_gas_features": False,
             "use_event_features": False,
+            "neighbors": [],
+            "custom_feature_plugins": [],
         },
     )
     engineer.build_electricity_features(start_date, end_date)
@@ -289,6 +297,74 @@ def test_build_electricity_features_respects_feature_toggles(tmp_path, monkeypat
     assert "is_event" in features_df.columns
     assert features_df["is_holiday"].max() == 0
     assert features_df["is_event"].max() == 0
+
+
+def test_build_electricity_features_custom_windows(tmp_path, monkeypatch):
+    """Refactoring allows custom lags and rolling windows via config."""
+    monkeypatch.chdir(tmp_path)
+    manager = _make_manager(tmp_path)
+
+    start_date = "2024-01-01"
+    end_date = "2024-01-03"
+
+    # Process roughly 3 days to support larger lags
+    timestamps = pd.date_range("2024-01-01", "2024-01-03 23:00", freq="1h", tz="UTC")
+    prices = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": range(len(timestamps)),
+            "market": "day_ahead",
+        }
+    )
+    prices_path = manager.get_processed_file_path("electricity_prices_clean", start_date, end_date)
+    prices_path.parent.mkdir(parents=True, exist_ok=True)
+    prices.to_csv(prices_path, index=False)
+
+    # Dummy load
+    load = pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "load_mw": [1000.0] * len(timestamps),
+        }
+    )
+    load_path = manager.get_processed_file_path("electricity_load_clean", start_date, end_date)
+    load.to_csv(load_path, index=False)
+
+    # No optional data needed for this test
+
+    custom_config = {
+        "use_cross_border_flows": False,
+        "feature_windows": {
+            "lags": [2, 5],  # Custom lags
+            "rolling_windows": [4],  # Custom window
+            "rolling_stats": ["mean", "max"],  # Custom stats
+        },
+        "use_weather_features": False,
+        "use_gas_features": False,
+        "use_event_features": False,
+        "neighbors": [],
+        "custom_feature_plugins": [],
+    }
+
+    engineer = FeatureEngineer(
+        "XX",
+        repository=CsvDataRepository(manager),
+        features_config=custom_config,
+    )
+    engineer.build_electricity_features(start_date, end_date)
+
+    features_path = manager.get_processed_file_path("electricity_features", start_date, end_date)
+    features_df = pd.read_csv(features_path)
+
+    # Verify custom columns exist
+    assert "price_lag_2" in features_df.columns
+    assert "price_lag_5" in features_df.columns
+    assert "price_rolling_mean_4" in features_df.columns
+    assert "price_rolling_max_4" in features_df.columns
+
+    # Verify default defaults are NOT present
+    assert "price_lag_1" not in features_df.columns
+    assert "price_lag_24" not in features_df.columns
 
 
 def test_train_with_trainer_uses_numeric_features_and_saves(tmp_path, monkeypatch):

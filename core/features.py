@@ -17,7 +17,6 @@ Classes:
 import logging
 import os
 from collections.abc import Sequence
-from typing import Any, cast
 
 import pandas as pd
 
@@ -44,8 +43,23 @@ class FeatureEngineer:
     ):
         self.country_code = country_code
         self.repository = repository
-        # Raw dict from CountryConfig.features_config; use simple boolean flags.
-        self._features_config: dict[str, Any] = cast(dict[str, Any], features_config or {})
+        self.features_config: FeaturesConfig = features_config or self._default_config()
+
+    def _default_config(self) -> FeaturesConfig:
+        """Return a default configuration if none is provided."""
+        return {
+            "use_cross_border_flows": False,
+            "feature_windows": {
+                "lags": [1, 2, 24],
+                "rolling_windows": [],
+                "rolling_stats": ["mean"],
+            },
+            "use_weather_features": True,
+            "use_gas_features": True,
+            "use_event_features": True,
+            "neighbors": [],
+            "custom_feature_plugins": [],
+        }
 
     def _is_enabled(self, flag: str, default: bool = True) -> bool:
         """
@@ -55,8 +69,11 @@ class FeatureEngineer:
             flag: Name of the flag in the features config dict
             default: Default value when the flag is not explicitly set
         """
-        value = self._features_config.get(flag, default)
-        return bool(value)
+        # We access via string for now to support dynamic checks, but cast to Any
+        # because TypedDict keys are fixed.
+        # Alternatively, we can check specific known keys directly.
+        val = self.features_config.get(flag, default)
+        return bool(val)
 
     def _load_cleaned(
         self,
@@ -105,7 +122,7 @@ class FeatureEngineer:
         df["target_price"] = df["price_eur_mwh"].shift(-1)
 
         # Get feature windows config
-        windows_config = self._features_config.get("feature_windows", {})
+        windows_config = self.features_config["feature_windows"]
 
         # Lags
         lags: Sequence[int] = windows_config.get("lags", [1, 2, 24])

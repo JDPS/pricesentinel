@@ -28,6 +28,10 @@ events:
 
 features:
   use_cross_border_flows: false
+  feature_windows:
+    lags: [1, 2, 24]
+    rolling_windows: [24]
+    rolling_stats: ["mean"]
   neighbors: []
   custom_feature_plugins: []
   use_weather_features: true

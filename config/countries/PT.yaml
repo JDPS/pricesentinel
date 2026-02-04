@@ -29,17 +29,17 @@ events:
   manual_events_path: data/PT/events/manual_events.csv
   persistence_required: 1
 
-features:
-  use_cross_border_flows: false
-  feature_windows:
-    lags: [1, 2, 24, 48, 168]
-    rolling_windows: [24, 168]
-    rolling_stats: ["mean", "std"]
-  neighbors: []
-  custom_feature_plugins: []
-  use_weather_features: true
-  use_gas_features: true
-  use_event_features: true
+  features:
+    use_cross_border_flows: false
+    feature_windows:
+      lags: [1, 2, 24, 48, 168]
+      rolling_windows: [24, 168]
+      rolling_stats: ["mean", "std"]
+    use_weather_features: true
+    use_gas_features: true
+    use_event_features: true
+    neighbors: []
+    custom_feature_plugins: []
 
 validation:
   price_min: -150.0 # PT historic min is slightly negative
