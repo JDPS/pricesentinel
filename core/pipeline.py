@@ -432,6 +432,32 @@ class Pipeline:
             logger.error(f"Pipeline failed: {e}", exc_info=True)
             raise
 
+    def run_cross_validation(
+        self, start_date: str, end_date: str, n_splits: int = 5
+    ) -> pd.DataFrame:
+        """
+        Run Time Series Cross-Validation.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            n_splits: Number of splits
+
+        Returns:
+            DataFrame with CV results
+        """
+        logger.info(f"=== Running Cross-Validation ({n_splits} splits) ===")
+        self._validate_dates(start_date, end_date)
+
+        # Local import to avoid circular dependency
+        from core.cross_validation import CrossValidator
+
+        cv = CrossValidator(self, n_splits=n_splits)
+        results = cv.run(start_date, end_date)
+
+        logger.info("=== Cross-Validation complete ===\n")
+        return results
+
     def get_info(self) -> PipelineInfo:
         """
         Get information about the pipeline and data.

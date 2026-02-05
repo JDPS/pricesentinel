@@ -19,16 +19,18 @@ Multi-country energy price forecasting system with event awareness and data qual
 
 ## Current Status
 
-- **Fully Implemented MVP**: End-to-end pipeline (Fetch → Clean → Features → Train → Forecast) works for Mock Country (XX).
-- **Portugal (PT)**: Fetching, cleaning, and basic features working. Baseline model training operational.
-- **Quality**: Windows-compatible automation, 100% test pass rate, and CI/CD guardrails established.
-- **Phases 6–7**: Baseline training implemented.
-- **Phases 8–10**: CI/CD and Testing implemented. Monitoring in development.
+- **Fully Implemented MVP**: End-to-end pipeline (Fetch → Clean → Features → Train → Forecast) works for Mock Country (XX) and Portugal (PT).
+- **Core Capabilities**:
+  - **Inference**: Day-ahead price forecasting with runtime data guards.
+  - **Validation**: Time Series Cross-Validation and Backtesting.
+  - **Quality**: Windows-compatible automation, 100% test pass rate, and CI/CD guardrails established.
+- **Phases 6–7**: Inference & Training Optimization (Complete).
+- **Phases 8–10**: CI/CD (Complete). Monitoring and Deployment (Next).
 
 ### Implemented Countries
 
-- **Portugal (PT)**: Full implementation with ENTSO-E, Open-Meteo, and TTF data
-- **Mock Country (XX)**: Synthetic data for testing and fast training demos
+- **Portugal (PT)**: Full implementation with ENTSO-E, Open-Meteo, and TTF data.
+- **Mock Country (XX)**: Synthetic data for testing and fast training demos.
 
 ## Quick Start
 
@@ -89,20 +91,28 @@ python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2
 # Run full pipeline for Portugal (training assumes sufficient data and configuration)
 python run_pipeline.py --country PT --all --start-date 2024-01-01 --end-date 2024-12-31
 
-# Run individual stages in a single command (mock country example)
-python run_pipeline.py --country XX --fetch --clean --features --train --start-date 2024-01-01 --end-date 2024-01-07
-
-# Get pipeline information
-python run_pipeline.py --country PT --info
-
-# Use an alternative model name
-python run_pipeline.py --country XX --all --model-name my_experiment --start-date 2024-01-01 --end-date 2024-01-07
-
-# Use fast training mode (smaller model, quick demo)
-python run_pipeline.py --country XX --all --fast-train --start-date 2024-01-01 --end-date 2024-01-07
-
 # Generate forecasts (after training)
 python run_pipeline.py --country PT --forecast --forecast-date 2024-01-08
+```
+
+## Advanced Usage
+
+### Cross-Validation
+
+Evaluate model performance using Time Series Split Cross-Validation:
+
+```bash
+python experiments/run_cv.py --country PT --start 2023-01-01 --end 2023-12-31 --splits 5
+```
+
+This generates a detailed report in `outputs/reports/`.
+
+### Benchmarking
+
+Run a full backtest benchmark (Train 2023 / Test Jan 2024):
+
+```bash
+python experiments/benchmark_pt.py
 ```
 
 ## Project Structure
@@ -123,6 +133,8 @@ pricesentinel/
     cleaning.py            # Data cleaning and verification
     features.py            # Feature engineering
     pipeline.py            # Main pipeline orchestration
+    cross_validation.py    # CV logic
+    guards.py              # Runtime data guards
 
   data_fetchers/           # Data source adapters
     mock/                  # Mock country (synthetic data)
@@ -130,16 +142,17 @@ pricesentinel/
     shared/                # Reusable fetchers (Open-Meteo, TTF)
 
   models/                  # Model trainers and saved artefacts
+    run_forecast.py        # Forecasting CLI
+
+  experiments/             # Experiments and Benchmarks
+    run_cv.py              # Cross-Validation CLI
+    benchmark_pt.py        # Portugal Benchmark
 
   data/                    # Data storage (gitignored)
     PT/                    # Portugal data
     XX/                    # Mock country data
 
   tests/                   # Test suite
-    test_abstractions.py
-    test_registry.py
-    test_mock_country.py
-    test_pipeline_mock_training.py
 
   run_pipeline.py          # Main CLI entry point
   setup_country.py         # Country setup utility
@@ -218,33 +231,32 @@ under `data/{country}/processed/forecasts/` for the given model.
 
 ## Roadmap
 
-### Phase 0–1 (Complete)
+### Phase 0–3 (Complete)
 
 - Core abstractions, Registry, CLI
-- Portugal implementation (Fetchers)
-
-### Phase 2–3 (Complete)
-
-- Data verification and cleaning (Electricity, Weather, Gas)
-- Timestamp normalization
+- Portugal implementation
+- Data verification and cleaning
 - Quality checks and guards
 
 ### Phase 4–5 (Complete)
 
-- Feature engineering (lags, rolling windows, calendar features)
-- Runtime guards
+- Feature engineering (lags, rolling windows)
+- Runtime guards (Input validation)
+- Inference Engine (Forecasting CLI)
+- Performance Verification (Backtesting, CV)
 
-### Phase 6–7 (In Progress)
+### Phase 6–7 (Complete)
 
-- Model training (Baseline Scikit-Learn implemented)
-- Inference engine (Basic forecasting implemented)
-- Production-ready model registry
+- Model training (Scikit-Learn Random Forest)
+- Model Registry
+- Inference operationalization
 
 ### Phase 8–10 (In Progress)
 
 - CI/CD Guardrails (GitHub Actions, Pre-commit) - **Complete**
 - Extended testing (100% pass rate) - **Complete**
-- Monitoring and Deployment
+- Monitoring and Alerting
+- Deployment Pipelines
 
 ## Requirements
 
