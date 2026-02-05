@@ -61,6 +61,19 @@ class DataRepository(ABC):
         pass
 
     @abstractmethod
+    def load_forecast(self, filename: str) -> pd.DataFrame | None:
+        """
+        Load forecast data from the forecasts directory.
+
+        Args:
+            filename: Filename for the forecast file.
+
+        Returns:
+            DataFrame if found, else None.
+        """
+        pass
+
+    @abstractmethod
     def save_forecast(self, df: pd.DataFrame, filename: str) -> Path:
         """
         Save forecast data to the forecasts directory.
@@ -247,6 +260,19 @@ class CsvDataRepository(DataRepository):
         # Sort by modification time, newest first
         files = sorted(processed_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
         return files
+
+    def load_forecast(self, filename: str) -> pd.DataFrame | None:
+        forecasts_dir = self.data_manager.get_processed_path() / "forecasts"
+        path = forecasts_dir / filename
+
+        if not path.exists():
+            return None
+
+        try:
+            return pd.read_csv(path, parse_dates=["forecast_timestamp"])
+        except Exception as e:
+            logger.warning(f"Failed to load forecast {path}: {e}")
+            return None
 
     def save_forecast(self, df: pd.DataFrame, filename: str) -> Path:
         forecasts_dir = self.data_manager.get_processed_path() / "forecasts"

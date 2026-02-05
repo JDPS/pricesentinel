@@ -41,6 +41,12 @@ events:
     neighbors: []
     custom_feature_plugins: []
 
+runtime_limits:
+  price_max: 500.0
+  price_min: -100.0
+  load_max: 20000.0
+  load_min: 2000.0
+
 validation:
   price_min: -150.0 # PT historic min is slightly negative
   price_max: 3000.0 # Cap

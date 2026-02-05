@@ -71,6 +71,15 @@ class FeaturesConfig(TypedDict):
     custom_feature_plugins: list[str]
 
 
+class RuntimeLimits(TypedDict, total=False):
+    """Configuration for runtime limits."""
+
+    price_max: float
+    price_min: float
+    load_max: float
+    load_min: float
+
+
 class ValidationLimits(TypedDict):
     """Data validation limits."""
 
@@ -91,6 +100,7 @@ class CountryConfigDict(TypedDict):
     gas: GasConfig
     events: EventsConfig
     features: FeaturesConfig
+    runtime_limits: RuntimeLimits
     validation: ValidationLimits
 
 

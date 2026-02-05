@@ -63,6 +63,14 @@ class PipelineBuilder:
         feature_engineer = FeatureEngineer(
             country_code, repository, features_config=config.features_config
         )
+        from typing import cast
+
+        from core.guards import RuntimeGuard  # avoid circular
+        from core.types import RuntimeLimits
+
+        runtime_guard = RuntimeGuard(
+            limits=cast(RuntimeLimits, getattr(config, "runtime_limits", {}))
+        )
         verifier = DataVerifier(country_code, validation_config=config.validation_config)
 
         # 4. Create Stages
@@ -79,6 +87,7 @@ class PipelineBuilder:
             verifier=verifier,
             repository=repository,
             model_registry=model_registry,
+            runtime_guard=runtime_guard,
         )
 
         logger.info(f"Built pipeline for {country_code}")

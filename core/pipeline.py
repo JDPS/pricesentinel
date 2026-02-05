@@ -55,6 +55,7 @@ class Pipeline:
         verifier: DataVerifier,
         repository: DataRepository,
         model_registry: Any = None,  # Avoid circular import, initialized in builder
+        runtime_guard: Any = None,  # Avoid circular
     ):
         """
         Initialise the pipeline with dependencies.
@@ -85,6 +86,10 @@ class Pipeline:
         from models.model_registry import ModelRegistry
 
         self.model_registry = model_registry or ModelRegistry()
+
+        from core.guards import RuntimeGuard
+
+        self.runtime_guard = runtime_guard or RuntimeGuard()
 
         self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self._last_start_date: str | None = None
@@ -277,6 +282,9 @@ class Pipeline:
             logger.warning("Features file %s is empty; skipping forecast", features_path)
             logger.info("=== Stage 5 skipped ===\n")
             return
+
+        # Apply Runtime Guards
+        df = self.runtime_guard.validate_and_clamp(df)
 
         # Build prediction matrix (numeric features only, excluding target)
         target_col = "target_price"
