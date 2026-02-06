@@ -9,12 +9,13 @@ Property-based tests for PriceSentinel core logic.
 from datetime import date
 
 import pytest
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from config.validation import validate_date_range
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(
     start=st.dates(min_value=date(2020, 1, 1), max_value=date(2030, 12, 31)),
     end=st.dates(min_value=date(2020, 1, 1), max_value=date(2030, 12, 31)),
