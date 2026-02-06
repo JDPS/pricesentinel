@@ -114,7 +114,7 @@ class ModelComparison:
         """
         if cv_method not in ("walk_forward", "time_series_split"):
             raise ValueError(
-                f"cv_method must be 'walk_forward' or 'time_series_split', " f"got '{cv_method}'"
+                f"cv_method must be 'walk_forward' or 'time_series_split', got '{cv_method}'"
             )
 
         logger.info(

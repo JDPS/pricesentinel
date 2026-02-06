@@ -23,7 +23,7 @@ try:
     import lightgbm as lgb
 except ImportError as e:
     raise ImportError(
-        "LightGBM is required for LightGBMTrainer. " "Install with: pip install pricesentinel[ml]"
+        "LightGBM is required for LightGBMTrainer. Install with: pip install pricesentinel[ml]"
     ) from e
 
 from .base import BaseTrainer

@@ -24,7 +24,7 @@ try:
     import xgboost as xgb
 except ImportError as e:
     raise ImportError(
-        "XGBoost is required for XGBoostTrainer. " "Install with: pip install pricesentinel[ml]"
+        "XGBoost is required for XGBoostTrainer. Install with: pip install pricesentinel[ml]"
     ) from e
 
 from .base import BaseTrainer

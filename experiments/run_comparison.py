@@ -263,7 +263,7 @@ def main() -> None:
 
     best = results.iloc[0]
     print(  # noqa: T201
-        f"\nBest model: {best['model']}  " f"(MAE {best['mean_mae']:.4f} +/- {best['std_mae']:.4f})"
+        f"\nBest model: {best['model']}  (MAE {best['mean_mae']:.4f} +/- {best['std_mae']:.4f})"
     )
     print("=" * 70 + "\n")  # noqa: T201
 

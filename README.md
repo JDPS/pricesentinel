@@ -4,7 +4,7 @@
 
 # PriceSentinel: Event-Aware Energy Price Forecasting
 
-Multi-country energy price forecasting system with event awareness and data quality guards.
+**Multi-country energy price forecasting system with event awareness and data quality guards.**
 
 ![Logo](psent.png)
 

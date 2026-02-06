@@ -30,7 +30,7 @@ The easiest way to test is using the mock country (XX) which generates synthetic
 
 ```bash
 # 1. Ensure you're in the project directory
-cd D:\Coding\01_Projects\pricesentinel
+cd pricesentinel
 
 # 2. Test with mock country (no API keys needed)
 python run_pipeline.py --country XX --fetch --start-date 2024-01-01 --end-date 2024-01-07
