@@ -12,7 +12,7 @@ import pytest
 
 torch = pytest.importorskip("torch", reason="PyTorch is required for deep learning tests")
 
-from core.exceptions import TrainingError  # noqa: E402
+from core.exceptions import TrainingError  # noqa: I001, E402
 from models.deep_learning.tft_trainer import TFTTrainer  # noqa: E402
 
 

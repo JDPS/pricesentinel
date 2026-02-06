@@ -8,7 +8,7 @@ FROM python:3.13-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 ARG EXTRAS=ml
 RUN uv sync --frozen --extra ${EXTRAS} --no-dev
 

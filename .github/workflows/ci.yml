@@ -21,7 +21,7 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: "3.13"
-            extras: "extra ml"
+            extras: "extra ml --extra dev --extra test"
     runs-on: ${{ matrix.os }}
 
     steps:

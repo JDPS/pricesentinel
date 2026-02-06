@@ -12,7 +12,7 @@ using Optuna with time-series aware cross-validation.
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -161,7 +161,7 @@ class OptunaHPO:
             best_params,
         )
 
-        return cast(dict[str, Any], best_params)
+        return dict(best_params)
 
     def _objective(
         self,

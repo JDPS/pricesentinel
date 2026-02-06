@@ -38,5 +38,6 @@ docs/
 
 # Misc
 *.md
+!README.md
 LICENSE
 nul

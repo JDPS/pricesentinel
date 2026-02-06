@@ -3,14 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 repos:
-  # Ruff linting and formatting
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
-
   # Spell checking
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
@@ -39,20 +31,6 @@ repos:
       - id: conventional-pre-commit
         stages: [commit-msg]
 
-  # Type checking with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
-    hooks:
-      - id: mypy
-        args:
-          - --config-file=mypy.ini
-        additional_dependencies:
-          - pydantic>=2.12.4
-          - pandas-stubs==2.3.2.250926
-          - types-PyYAML
-          - types-requests
-          - httpx>=0.28.1
-
   # REUSE license compliance
   - repo: https://github.com/fsfe/reuse-tool
     rev: v5.0.2
@@ -61,10 +39,25 @@ repos:
       - id: reuse
         stages: [pre-commit]
 
-  # Local hooks for project-specific checks
+  # Local hooks — use project-installed tools via uv to match CI exactly
   - repo: local
     hooks:
-      # Run pytest before commit to ensure tests pass
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy .
+        language: system
+        types: [python]
+        pass_filenames: false
       - id: pytest-check
         name: pytest
         entry: uv run pytest -q -p no:xdist
