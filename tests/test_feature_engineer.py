@@ -8,6 +8,7 @@ Tests for FeatureEngineer feature building and training helpers.
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -36,6 +37,9 @@ class DummyTrainer(BaseTrainer):
         self.last_train_args = (x_train, y_train, x_val, y_val)
         # Return a deterministic metric
         return {"train_mae": 1.23}
+
+    def predict(self, x: pd.DataFrame) -> np.ndarray:
+        return np.zeros(len(x))
 
     def save(
         self,

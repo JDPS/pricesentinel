@@ -11,7 +11,7 @@ name = "pricesentinel"
 version = "0.1.0"
 description = "Multi-country energy price forecasting with event awareness and data quality guards"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 
 
 license = {text = "Apache-2.0"}
@@ -46,7 +46,6 @@ classifiers = [
 dependencies = [
     "numpy>=2.3.4",
     "pandas>=2.3.3",
-    "pandas-stubs>=2.3.2.250926,<2.4",
     "pydantic>=2.12.4,<3",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
@@ -56,8 +55,6 @@ dependencies = [
     "holidays>=0.40",
     "click>=8.3.1",
     "tqdm>=4.67.2",
-    "pytest>=9.0.2",
-    "pytest-asyncio>=0.25.2",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +62,7 @@ dev = [
     "ruff>=0.8.4",
     "mypy>=1.14.1",
     "pre-commit>=4.0.0",
+    "pandas-stubs>=2.3.2.250926,<2.4",
     "types-PyYAML>=6.0.0",
     "types-requests>=2.32.0",
     "invoke>=2.2.0",
@@ -89,8 +87,21 @@ docs = [
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.26.0",
 ]
+ml = [
+    "xgboost>=2.1.0",
+    "lightgbm>=4.5.0",
+    "optuna>=4.1.0",
+    "shap>=0.50.0",
+    "statsmodels>=0.14.0",
+]
+deep = [
+    "torch>=2.5.0",
+]
+tracking = [
+    "mlflow>=2.19.0",
+]
 all = [
-    "pricesentinel[dev,test,security,build,docs]",
+    "pricesentinel[dev,test,security,build,docs,ml,deep,tracking]",
 ]
 
 [project.urls]
@@ -103,7 +114,7 @@ Issues = "https://github.com/JDPS/pricesentinel/issues"
 pricesentinel = "run_pipeline:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["core", "config", "data_fetchers"]
+packages = ["core", "config", "data_fetchers", "models", "experiments"]
 
 
 # Tool configurations consolidated
@@ -157,7 +168,7 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
     "pass",
 ]
-fail_under = 15
+fail_under = 70
 show_missing = true
 precision = 2
 
@@ -165,7 +176,7 @@ precision = 2
 python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
 disallow_any_unimported = false
 no_implicit_optional = true
 warn_redundant_casts = true
@@ -187,7 +198,12 @@ warn_unused_ignores = true
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "requests.*"]
+module = "models.*"
+disallow_untyped_defs = true
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "requests.*", "mlflow.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

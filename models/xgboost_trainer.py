@@ -3,28 +3,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-This module provides the SklearnRegressorTrainer class for building, training, and saving
-a baseline price forecasting sklearn regressor using a RandomForestRegressor model.
+XGBoost trainer for price forecasting.
 
-The module integrates a structured approach to model training and evaluation by computing
-basic metrics like mean absolute error (MAE) and root mean squared error (RMSE) for training
-and validation datasets.
-
-Classes:
-    SklearnRegressorTrainer: A trainer class to handle regression tasks using sklearn's
-    RandomForestRegressor with features like model saving and metric logging.
+This module provides an XGBoost-based regressor trainer with support for
+early stopping on validation sets and configurable hyperparameters via
+ModelConfig.
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+try:
+    import xgboost as xgb
+except ImportError as e:
+    raise ImportError(
+        "XGBoost is required for XGBoostTrainer. " "Install with: pip install pricesentinel[ml]"
+    ) from e
 
 from .base import BaseTrainer
 from .model_registry import ModelRegistry
@@ -34,15 +35,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_PARAMS: dict[str, Any] = {
+    "n_estimators": 500,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_weight": 3,
+    "random_state": 42,
+    "n_jobs": -1,
+}
 
-class SklearnRegressorTrainer(BaseTrainer):
+
+class XGBoostTrainer(BaseTrainer):
     """
-    Baseline sklearn regressor trainer for price forecasting.
+    XGBoost regressor trainer for price forecasting.
+
+    Supports early stopping when a validation set is provided.
     """
 
     def __init__(
         self,
-        model_name: str = "baseline",
+        model_name: str = "xgboost",
         models_root: str | Path = "models",
         registry: ModelRegistry | None = None,
         config: ModelConfig | None = None,
@@ -55,17 +69,12 @@ class SklearnRegressorTrainer(BaseTrainer):
         )
         params = (config or {}).get("hyperparameters", {})
 
-        # Lightweight "fast" mode for quick demo runs
-        fast_mode = model_name.endswith("_fast")
-        n_estimators = params.get("n_estimators", 50 if fast_mode else 100)
-        max_depth = params.get("max_depth", 5 if fast_mode else 10)
+        # Merge defaults with config overrides
+        merged = {**_DEFAULT_PARAMS, **params}
 
-        self.model = RandomForestRegressor(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=params.get("random_state", 42),
-            n_jobs=params.get("n_jobs", -1),
-        )
+        self.early_stopping_rounds: int = merged.pop("early_stopping_rounds", 50)
+
+        self.model = xgb.XGBRegressor(**merged)
         self.metrics: dict[str, float | str] = {}
 
     def train(
@@ -76,37 +85,38 @@ class SklearnRegressorTrainer(BaseTrainer):
         y_val: pd.Series | None = None,
     ) -> dict[str, float | str]:
         """
-        Train the underlying sklearn model and compute basic metrics.
+        Train the XGBoost model with optional early stopping.
         """
-        logger.info("Training sklearn regressor (%s) on %d samples", self.model_name, len(x_train))
-        self.model.fit(x_train, y_train)
+        logger.info("Training XGBoost (%s) on %d samples", self.model_name, len(x_train))
+
+        fit_kwargs: dict[str, Any] = {}
+        if x_val is not None and y_val is not None and len(x_val) > 0:
+            fit_kwargs["eval_set"] = [(x_val, y_val)]
+            fit_kwargs["verbose"] = False
+
+        self.model.fit(x_train, y_train, **fit_kwargs)
 
         metrics: dict[str, float | str] = {}
 
         # Training metrics
-        y_pred_train = self.model.predict(x_train)
+        y_pred_train: np.ndarray = self.model.predict(x_train)
         metrics["train_mae"] = float(mean_absolute_error(y_train, y_pred_train))
         metrics["train_rmse"] = float(np.sqrt(mean_squared_error(y_train, y_pred_train)))
 
-        # Validation metrics (if provided)
+        # Validation metrics
         if x_val is not None and y_val is not None and len(x_val) > 0:
-            y_pred_val = self.model.predict(x_val)
+            y_pred_val: np.ndarray = self.model.predict(x_val)
             metrics["val_mae"] = float(mean_absolute_error(y_val, y_pred_val))
             metrics["val_rmse"] = float(np.sqrt(mean_squared_error(y_val, y_pred_val)))
 
         self.metrics = metrics
-        logger.info("Training metrics: %s", metrics)
+        logger.info("XGBoost training metrics: %s", metrics)
         return metrics
 
     def predict(self, x: pd.DataFrame) -> np.ndarray:
-        """
-        Generate predictions from the trained RandomForest model.
-        """
+        """Generate predictions from the trained XGBoost model."""
         result: np.ndarray = self.model.predict(x)
         return result
-
-    def _model_dir(self, country_code: str, run_id: str) -> Path:
-        return self.models_root / country_code / self.model_name / run_id
 
     def save(
         self,
@@ -114,9 +124,7 @@ class SklearnRegressorTrainer(BaseTrainer):
         run_id: str,
         metrics: dict[str, float | str] | None = None,
     ) -> None:
-        """
-        Save the trained model and metrics under the models directory.
-        """
+        """Save the trained model and metrics."""
         if metrics is None:
             metrics = self.metrics
 

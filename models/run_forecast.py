@@ -17,6 +17,7 @@ import sys
 from datetime import UTC, datetime, timedelta, timezone
 
 from config.country_registry import ConfigLoader
+from core.exceptions import PriceSentinelError
 from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 
@@ -109,8 +110,11 @@ async def main() -> None:
 
         logger.info("--- Forecast Run Complete ---")
 
-    except Exception as e:
+    except PriceSentinelError as e:
         logger.error(f"Forecast run failed: {e}", exc_info=True)
+        sys.exit(1)
+    except (ValueError, FileNotFoundError, OSError) as e:
+        logger.error(f"Forecast run failed with unexpected error: {e}", exc_info=True)
         sys.exit(1)
 
 

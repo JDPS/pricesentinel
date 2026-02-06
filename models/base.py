@@ -19,10 +19,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 
 from .model_registry import ModelRegistry
+
+if TYPE_CHECKING:
+    from core.types import ModelConfig
 
 
 class BaseTrainer(ABC):
@@ -35,10 +40,12 @@ class BaseTrainer(ABC):
         model_name: str,
         models_root: str | Path = "models",
         registry: ModelRegistry | None = None,
+        config: ModelConfig | None = None,
     ):
         self.model_name = model_name
         self.models_root = Path(models_root)
         self.registry = registry or ModelRegistry(models_root)
+        self.config: ModelConfig = config or {}
 
     @abstractmethod
     def train(
@@ -50,6 +57,12 @@ class BaseTrainer(ABC):
     ) -> dict[str, float | str]:
         """
         Train the model and return evaluation metrics.
+        """
+
+    @abstractmethod
+    def predict(self, x: pd.DataFrame) -> np.ndarray:
+        """
+        Generate predictions from the trained model.
         """
 
     @abstractmethod

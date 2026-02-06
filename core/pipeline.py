@@ -18,7 +18,7 @@ import pandas as pd
 from config.country_registry import CountryConfig
 from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
-from core.exceptions import DateRangeError
+from core.exceptions import DateRangeError, PriceSentinelError
 from core.features import FeatureEngineer
 from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
@@ -181,7 +181,7 @@ class Pipeline:
             )
 
             self.verifier.verify_electricity(prices_df, load_df)
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             logger.warning(f"Verification failed: {e}")
 
         logger.info("=== Stage 2 complete ===\n")
@@ -428,9 +428,11 @@ class Pipeline:
             logger.info(f"PIPELINE COMPLETE FOR {self.country_code}")
             logger.info(f"{'=' * 70}\n")
 
-        except Exception as e:
-            logger.error(f"Pipeline failed: {e}", exc_info=True)
+        except PriceSentinelError:
             raise
+        except Exception as e:
+            logger.error(f"Pipeline failed with unexpected error: {e}", exc_info=True)
+            raise PriceSentinelError(str(e)) from e
 
     def run_cross_validation(
         self, start_date: str, end_date: str, n_splits: int = 5

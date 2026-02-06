@@ -10,7 +10,9 @@ using time-series aware splitting strategies.
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -148,15 +150,7 @@ class CrossValidator:
             trainer.train(X_train, y_train)
 
             # Predict
-            # BaseTrainer doesn't guarantee .model, but SklearnRegressorTrainer has it.
-            # In a real app we might want a common Predictor interface.
-            model = getattr(trainer, "model", None)
-            if model is None or not hasattr(model, "predict"):
-                raise AttributeError(
-                    f"Trainer {type(trainer)} has no 'model' with 'predict' method"
-                )
-
-            y_pred = model.predict(X_test)
+            y_pred = trainer.predict(X_test)
 
             # Evaluate
             mae = mean_absolute_error(y_test, y_pred)
@@ -192,4 +186,139 @@ class CrossValidator:
             )
 
         results_df = pd.DataFrame(fold_results)
+        return results_df
+
+
+class WalkForwardValidator:
+    """
+    Walk-forward validation for time-series models.
+
+    Simulates realistic model deployment by training on historical data and
+    evaluating on the next unseen window, then stepping forward. Supports
+    both expanding (growing training set) and sliding (fixed-size) window
+    modes.
+
+    Args:
+        initial_train_size: Minimum number of samples in the first training
+            window.
+        step_size: Number of samples to advance on each step. Defaults to
+            24 (one day of hourly data).
+        mode: Window strategy -- ``"expanding"`` grows the training set each
+            step; ``"sliding"`` keeps it fixed at *initial_train_size*.
+    """
+
+    def __init__(
+        self,
+        initial_train_size: int,
+        step_size: int = 24,
+        mode: str = "expanding",
+    ) -> None:
+        if initial_train_size < 1:
+            raise ValueError("initial_train_size must be >= 1")
+        if step_size < 1:
+            raise ValueError("step_size must be >= 1")
+        if mode not in ("expanding", "sliding"):
+            raise ValueError(f"mode must be 'expanding' or 'sliding', got '{mode}'")
+
+        self.initial_train_size = initial_train_size
+        self.step_size = step_size
+        self.mode = mode
+
+    # pylint: disable=import-outside-toplevel
+    def run(
+        self,
+        x: pd.DataFrame,
+        y: pd.Series,
+        trainer_factory: Callable[[], Any],
+    ) -> pd.DataFrame:
+        """
+        Execute walk-forward validation.
+
+        For each step the validator:
+        1. Creates a fresh trainer via *trainer_factory*.
+        2. Trains on the current training window.
+        3. Predicts on the next *step_size* samples.
+        4. Records MAE and RMSE for the step.
+
+        Args:
+            x: Feature matrix (rows ordered chronologically).
+            y: Target series aligned with *x*.
+            trainer_factory: Zero-argument callable that returns a new
+                :class:`~models.base.BaseTrainer` instance.
+
+        Returns:
+            DataFrame with columns ``step_idx``, ``train_size``,
+            ``test_size``, ``mae``, and ``rmse``.
+
+        Raises:
+            ValueError: If the dataset is too small for even one step.
+        """
+        n_samples = len(x)
+
+        if n_samples < self.initial_train_size + self.step_size:
+            raise ValueError(
+                f"Dataset too small ({n_samples} samples) for "
+                f"initial_train_size={self.initial_train_size} + "
+                f"step_size={self.step_size}"
+            )
+
+        step_results: list[dict[str, float | int]] = []
+        step_idx = 0
+        test_start = self.initial_train_size
+
+        while test_start < n_samples:
+            test_end = min(test_start + self.step_size, n_samples)
+
+            if self.mode == "expanding":
+                train_start = 0
+            else:
+                # sliding: keep training window fixed
+                train_start = max(0, test_start - self.initial_train_size)
+
+            x_train = x.iloc[train_start:test_start]
+            y_train = y.iloc[train_start:test_start]
+            x_test = x.iloc[test_start:test_end]
+            y_test = y.iloc[test_start:test_end]
+
+            logger.info(
+                "WalkForward step %d: train [%d:%d] (%d), test [%d:%d] (%d), mode=%s",
+                step_idx,
+                train_start,
+                test_start,
+                len(x_train),
+                test_start,
+                test_end,
+                len(x_test),
+                self.mode,
+            )
+
+            trainer = trainer_factory()
+            trainer.train(x_train, y_train)
+            y_pred = trainer.predict(x_test)
+
+            mae = float(mean_absolute_error(y_test, y_pred))
+            rmse = float(np.sqrt(mean_squared_error(y_test, y_pred)))
+
+            step_results.append(
+                {
+                    "step_idx": step_idx,
+                    "train_size": len(x_train),
+                    "test_size": len(x_test),
+                    "mae": mae,
+                    "rmse": rmse,
+                }
+            )
+
+            logger.info("WalkForward step %d: MAE=%.4f, RMSE=%.4f", step_idx, mae, rmse)
+
+            test_start += self.step_size
+            step_idx += 1
+
+        results_df = pd.DataFrame(step_results)
+        logger.info(
+            "WalkForward complete: %d steps, mean MAE=%.4f, mean RMSE=%.4f",
+            len(results_df),
+            results_df["mae"].mean(),
+            results_df["rmse"].mean(),
+        )
         return results_df

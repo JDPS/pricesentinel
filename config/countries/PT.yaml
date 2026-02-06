@@ -38,6 +38,10 @@ events:
     use_weather_features: true
     use_gas_features: true
     use_event_features: true
+    use_fourier_features: true
+    fourier_periods: [24, 168]
+    use_price_volatility: true
+    use_price_momentum: true
     neighbors: []
     custom_feature_plugins: []
 

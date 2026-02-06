@@ -18,6 +18,7 @@ import logging
 import os
 from collections.abc import Sequence
 
+import numpy as np
 import pandas as pd
 
 from core.repository import DataRepository
@@ -74,6 +75,43 @@ class FeatureEngineer:
         # Alternatively, we can check specific known keys directly.
         val = self.features_config.get(flag, default)
         return bool(val)
+
+    def _add_fourier_features(
+        self,
+        df: pd.DataFrame,
+        periods: Sequence[int] | None = None,
+    ) -> pd.DataFrame:
+        """
+        Add sin/cos Fourier features for cyclical seasonality capture.
+
+        Args:
+            df: DataFrame with an 'hour' column (0-23).
+            periods: Cycle lengths in hours (default: [24, 168] for daily + weekly).
+        """
+        if periods is None:
+            periods = self.features_config.get("fourier_periods", [24, 168])
+
+        for period in periods:
+            df[f"sin_{period}h"] = np.sin(2 * np.pi * df["hour"] / period)
+            df[f"cos_{period}h"] = np.cos(2 * np.pi * df["hour"] / period)
+
+        return df
+
+    def _add_volatility_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add rolling standard deviation and price range for volatility."""
+        for window in [12, 24, 48]:
+            df[f"price_volatility_{window}"] = df["price_eur_mwh"].rolling(window).std()
+            df[f"price_range_{window}"] = (
+                df["price_eur_mwh"].rolling(window).max()
+                - df["price_eur_mwh"].rolling(window).min()
+            )
+        return df
+
+    def _add_momentum_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add price rate of change (momentum) features."""
+        for window in [6, 12, 24]:
+            df[f"price_roc_{window}"] = df["price_eur_mwh"].pct_change(window)
+        return df
 
     def _load_cleaned(
         self,
@@ -149,6 +187,18 @@ class FeatureEngineer:
         # Calendar features
         df["hour"] = df["timestamp"].dt.hour
         df["day_of_week"] = df["timestamp"].dt.dayofweek
+
+        # Fourier features for cyclical seasonality
+        if self._is_enabled("use_fourier_features", False):
+            df = self._add_fourier_features(df)
+
+        # Price volatility features
+        if self._is_enabled("use_price_volatility", False):
+            df = self._add_volatility_features(df)
+
+        # Price momentum features
+        if self._is_enabled("use_price_momentum", False):
+            df = self._add_momentum_features(df)
 
         # Optional load feature
         if load_df is not None and "load_mw" in load_df.columns:

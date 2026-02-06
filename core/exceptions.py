@@ -108,6 +108,24 @@ class ModelError(PriceSentinelError):
     pass
 
 
+class TrainingError(ModelError):
+    """Raised when model training fails."""
+
+    pass
+
+
+class HyperparameterError(ModelError):
+    """Raised when hyperparameter optimization fails."""
+
+    pass
+
+
+class EnsembleError(ModelError):
+    """Raised when ensemble construction or prediction fails."""
+
+    pass
+
+
 class ForecastError(PriceSentinelError):
     """Raised when forecast generation fails."""
 

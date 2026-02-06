@@ -67,7 +67,7 @@ class ModelRegistry:
         try:
             with open(model_path, "wb") as f:
                 pickle.dump(model, f)
-        except Exception as e:
+        except (OSError, pickle.PicklingError) as e:
             logger.error(f"Failed to pickle model for {country_code}/{model_name}: {e}")
             raise
 
@@ -85,7 +85,7 @@ class ModelRegistry:
         try:
             with open(metrics_path, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             logger.warning(f"Failed to save metrics for {country_code}/{model_name}: {e}")
 
         logger.info(f"Saved model {model_name} for {country_code} (run_id={run_id})")

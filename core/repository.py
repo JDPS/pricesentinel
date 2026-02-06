@@ -248,7 +248,7 @@ class CsvDataRepository(DataRepository):
         # For simplicity in this project context where this is only used for holidays/manual events:
         try:
             return pd.read_csv(path)
-        except Exception as e:
+        except (OSError, pd.errors.ParserError, ValueError) as e:
             logger.warning(f"Failed to read event data from {path}: {e}")
             return None
 
@@ -270,7 +270,7 @@ class CsvDataRepository(DataRepository):
 
         try:
             return pd.read_csv(path, parse_dates=["forecast_timestamp"])
-        except Exception as e:
+        except (OSError, pd.errors.ParserError, ValueError) as e:
             logger.warning(f"Failed to load forecast {path}: {e}")
             return None
 
@@ -309,7 +309,7 @@ class CsvDataRepository(DataRepository):
                 df = pd.read_csv(path, parse_dates=["timestamp"])
                 if not df.empty:
                     frames.append(df)
-            except Exception as e:
+            except (OSError, pd.errors.ParserError, ValueError) as e:
                 logger.warning(f"Failed to read {path}: {e}")
 
         return frames

@@ -54,14 +54,9 @@ def test_cv_run_basic_flow(mock_pipeline):
         # Mock trainer
         with patch("models.get_trainer") as mock_get_trainer:
             mock_trainer = MagicMock()
-            mock_model = MagicMock()
 
-            # Predict returns list of same length as input
-            # Use side_effect to dynamically return correct length array
-            mock_model.predict.side_effect = lambda x: [52.0] * len(x)
-
-            # trainer.model should be the mock model
-            mock_trainer.model = mock_model
+            # predict() returns array of same length as input
+            mock_trainer.predict.side_effect = lambda x: [52.0] * len(x)
             # trainer.train returns metrics dict (ignored)
             mock_trainer.train.return_value = {}
 

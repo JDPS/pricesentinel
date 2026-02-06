@@ -1,0 +1,42 @@
+# Copyright (c) 2025 Soares
+# SPDX-License-Identifier: Apache-2.0
+
+# Version control
+.git
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+env
+.mypy_cache
+.pytest_cache
+.pytest_temp_safe
+.hypothesis
+.ruff_cache
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Build artifacts
+dist
+build
+*.egg-info
+
+# Data and outputs (mounted as volumes)
+data/
+outputs/
+logs/
+
+# Documentation
+docs/
+
+# Misc
+*.md
+LICENSE
+nul

@@ -4,7 +4,7 @@
 
 """Type definitions for PriceSentinel."""
 
-from typing import Literal, NewType, TypedDict
+from typing import Any, Literal, NewType, TypedDict
 
 # Semantic types
 CountryCode = NewType("CountryCode", str)
@@ -59,7 +59,7 @@ class FeatureWindowConfig(TypedDict):
     rolling_stats: list[Literal["mean", "std", "min", "max"]]
 
 
-class FeaturesConfig(TypedDict):
+class FeaturesConfig(TypedDict, total=False):
     """Feature engineering configuration."""
 
     use_cross_border_flows: bool
@@ -69,6 +69,21 @@ class FeaturesConfig(TypedDict):
     use_event_features: bool
     neighbors: list[str]
     custom_feature_plugins: list[str]
+    # Advanced feature toggles (Phase 2)
+    use_fourier_features: bool
+    fourier_periods: list[int]
+    use_price_volatility: bool
+    use_price_momentum: bool
+
+
+class ModelConfig(TypedDict, total=False):
+    """Configuration for a model trainer."""
+
+    algorithm: str  # e.g., "random_forest", "xgboost", "lightgbm"
+    hyperparameters: dict[str, Any]
+    use_hpo: bool
+    hpo_trials: int
+    hpo_metric: Literal["mae", "rmse"]
 
 
 class RuntimeLimits(TypedDict, total=False):
