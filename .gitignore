@@ -49,8 +49,9 @@ data/*/metadata/*
 *.h5
 *.hdf5
 
-# Model files
+# Model artifacts (trained models per country, e.g. models/PT/, models/XX/)
 models/*/
+!models/deep_learning/
 !models/.gitkeep
 model_registry.json
 
