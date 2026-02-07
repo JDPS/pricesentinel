@@ -270,7 +270,8 @@ class TFTTrainer(DeepLearningTrainer):
         """Compute mean loss over a dataloader in eval mode."""
         import torch
 
-        self.model.eval()  # type: ignore[union-attr]
+        assert self.model is not None
+        self.model.eval()
         total_loss = 0.0
         n_batches = 0
         with torch.no_grad():

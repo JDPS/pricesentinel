@@ -79,7 +79,7 @@ class DeepLearningTrainer(BaseTrainer):
         y: pd.Series,
         batch_size: int,
         shuffle: bool = True,
-    ) -> DataLoader:  # type: ignore[type-arg,unused-ignore]
+    ) -> DataLoader[Any]:
         """
         Convert pandas structures into a PyTorch DataLoader.
 
