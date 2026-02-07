@@ -276,7 +276,7 @@ class TFTTrainer(DeepLearningTrainer):
         with torch.no_grad():
             for x_batch, y_batch in loader:
                 x_batch, y_batch = x_batch.to(device), y_batch.to(device)
-                preds = self.model(x_batch)  # type: ignore[misc]
+                preds = self.model(x_batch)
                 total_loss += criterion(preds, y_batch).item()
                 n_batches += 1
         return total_loss / max(n_batches, 1)
