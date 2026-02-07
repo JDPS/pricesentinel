@@ -39,28 +39,33 @@ repos:
       - id: reuse
         stages: [pre-commit]
 
-  # Local hooks — use project-installed tools via uv to match CI exactly
+  # Local hooks — mirror CI commands exactly via uv
   - repo: local
     hooks:
       - id: ruff-check
         name: ruff check
-        entry: uv run ruff check --fix
+        entry: uv run ruff check .
         language: system
-        types: [python]
+        pass_filenames: false
       - id: ruff-format
-        name: ruff format
-        entry: uv run ruff format
+        name: ruff format check
+        entry: uv run ruff format --check .
         language: system
-        types: [python]
+        pass_filenames: false
       - id: mypy
         name: mypy
         entry: uv run mypy .
         language: system
-        types: [python]
         pass_filenames: false
       - id: pytest-check
         name: pytest
-        entry: uv run pytest -q -p no:xdist
+        entry: uv run pytest --cov --cov-report=term
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: build-check
+        name: build package
+        entry: uv run python -m build
         language: system
         pass_filenames: false
         stages: [pre-commit]

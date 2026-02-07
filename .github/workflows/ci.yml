@@ -47,6 +47,10 @@ jobs:
       - name: Lint with ruff
         run: uv run ruff check .
 
+      # Run format check
+      - name: Format check with ruff
+        run: uv run ruff format --check .
+
       # Run type checking
       - name: Type check with mypy
         run: uv run mypy .
