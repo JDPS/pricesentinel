@@ -32,6 +32,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Add this step to install libomp on macOS
+      - name: Install libomp on macOS
+        if: runner.os == 'macOS'
+        run: brew install libomp
+
       # Use official setup-uv action with caching
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
