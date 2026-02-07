@@ -70,16 +70,20 @@ jobs:
       # Run tests with coverage
       - name: Run tests with coverage
         run: uv run pytest --cov --cov-report=xml --cov-report=term
+        env:
+          OMP_NUM_THREADS: "1"
 
       # Upload coverage to Codecov (only on ubuntu to avoid duplicates)
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.extras == 'all-extras'
         uses: codecov/codecov-action@v5
         with:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       # Build package on all platforms to verify
       - name: Build package
@@ -88,7 +92,7 @@ jobs:
 
       # Upload artifacts (only from ubuntu)
       - name: Upload distribution artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && matrix.extras == 'all-extras'
         uses: actions/upload-artifact@v6
         with:
           name: dist
