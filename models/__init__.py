@@ -125,7 +125,7 @@ register_trainer("ensemble_stacking", StackingTrainer)
 
 try:
     from .deep_learning.nbeats_trainer import (
-        NBEATSTrainer,  # noqa: E402 # type: ignore[import-untyped]
+        NBEATSTrainer,  # noqa: E402 # type: ignore[import-not-found,import-untyped,unused-ignore]
     )
 
     register_trainer("nbeats", NBEATSTrainer)
@@ -133,7 +133,9 @@ except ImportError:
     pass
 
 try:
-    from .deep_learning.tft_trainer import TFTTrainer  # noqa: E402 # type: ignore[import-untyped]
+    from .deep_learning.tft_trainer import (
+        TFTTrainer,  # noqa: E402 # type: ignore[import-not-found,import-untyped,unused-ignore]
+    )
 
     register_trainer("tft", TFTTrainer)
 except ImportError:
