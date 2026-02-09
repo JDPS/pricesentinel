@@ -2191,7 +2191,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "optuna", marker = "extra == 'ml'", specifier = ">=4.1.0" },
     { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.3.2.250926,<2.4" },
+    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.3.2.250926,<3.1" },
     { name = "pip-audit", marker = "extra == 'security'", specifier = ">=2.7.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "pricesentinel", extras = ["dev", "test", "security", "build", "docs", "ml", "deep", "tracking"], marker = "extra == 'all'" },
