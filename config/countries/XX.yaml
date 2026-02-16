@@ -41,3 +41,15 @@ features:
   fourier_periods: [24, 168]
   use_price_volatility: true
   use_price_momentum: true
+
+runtime_limits:
+  price_max: 1000.0
+  price_min: -200.0
+  load_max: 25000.0
+  load_min: 500.0
+
+validation:
+  price_min: -300.0
+  price_max: 5000.0
+  load_min: 100.0
+  load_max: 30000.0

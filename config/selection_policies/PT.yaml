@@ -1,0 +1,23 @@
+# Champion selection policy for Portugal
+
+allowed_models:
+  - baseline
+  - xgboost
+  - lightgbm
+
+cv_method: walk_forward
+initial_train_size: 720
+step_size: 24
+n_splits: 5
+
+metrics_priority:
+  - mae
+  - rmse
+  - stability
+  - model_name
+
+hpo:
+  enabled: true
+  shortlist_size: 2
+  n_trials: 20
+  cv_splits: 3

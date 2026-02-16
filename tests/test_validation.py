@@ -55,7 +55,7 @@ def test_gas_config_rejects_invalid_currency_code():
 
 
 def test_country_config_timezone_format_validation():
-    """CountryConfigSchema enforces a simple IANA-style timezone format."""
+    """CountryConfigSchema enforces valid timezone identifiers."""
     template = generate_config_template("DE", "Germany")
     template["timezone"] = "InvalidTimezone"
 
@@ -64,6 +64,28 @@ def test_country_config_timezone_format_validation():
     except ValidationError as exc:
         # Ensure the timezone validator is the source of the failure
         messages = str(exc)
-        assert "timezone must be in IANA format" in messages
+        assert "timezone must be a valid IANA timezone" in messages
     else:
         raise AssertionError("ValidationError expected for invalid timezone")
+
+
+def test_country_config_rejects_misnested_features_block():
+    """Misnested `events.features` should fail fast."""
+    template = generate_config_template("PT", "Portugal")
+    template["events"]["features"] = {"use_weather_features": False}
+
+    with pytest.raises(ValidationError) as exc:
+        validate_country_config(template)
+
+    assert "events.features" in str(exc.value)
+
+
+def test_country_config_requires_validation_block():
+    """Validation limits are a required top-level block."""
+    template = generate_config_template("PT", "Portugal")
+    template.pop("validation")
+
+    with pytest.raises(ValidationError) as exc:
+        validate_country_config(template)
+
+    assert "validation" in str(exc.value)

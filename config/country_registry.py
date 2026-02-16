@@ -15,8 +15,10 @@ from pathlib import Path
 from typing import Any, cast
 
 import yaml
+from pydantic import ValidationError
 
 from config.adapter_registry import AdapterRegistry, get_default_registry
+from config.validation import validate_country_config
 from core.exceptions import ConfigurationError, CountryNotRegisteredError
 from core.types import (
     CountryConfigDict,
@@ -24,6 +26,7 @@ from core.types import (
     EventsConfig,
     FeaturesConfig,
     GasConfig,
+    RuntimeLimits,
     ValidationLimits,
     WeatherConfig,
 )
@@ -64,14 +67,15 @@ class CountryConfig:
         self.features_config: FeaturesConfig = cast(
             FeaturesConfig, cast(Any, config_dict.get("features", {}))
         )
+        self.runtime_limits: RuntimeLimits = cast(
+            RuntimeLimits, cast(Any, config_dict.get("runtime_limits", {}))
+        )
         self.validation_config: ValidationLimits = cast(
             ValidationLimits, cast(Any, config_dict.get("validation", {}))
         )
 
     @classmethod
-    def from_yaml(
-        cls, country_code: str, config_dir: str = "configure_directory"
-    ) -> "CountryConfig":
+    def from_yaml(cls, country_code: str, config_dir: str = configure_directory) -> "CountryConfig":
         """
         Load country configuration from the YAML file.
 
@@ -100,18 +104,27 @@ class CountryConfig:
             )
 
         with open(config_path, encoding="utf-8") as f:
-            # We assume the YAML matches the TypedDict structure
-            config_dict: CountryConfigDict = yaml.safe_load(f)
+            loaded = yaml.safe_load(f)
 
-        # Validate required fields
-        required_fields = ["country_code", "timezone"]
-        missing_fields = [field for field in required_fields if field not in config_dict]
-
-        if missing_fields:
+        if not isinstance(loaded, dict):
             raise ConfigurationError(
-                f"Configuration for {country_code} is missing required fields: {missing_fields}"
+                f"Configuration for {country_code} must be a YAML mapping/object"
             )
 
+        try:
+            validated = validate_country_config(loaded)
+        except ValidationError as exc:
+            details = []
+            for error in exc.errors():
+                location = ".".join(str(part) for part in error.get("loc", []))
+                message = str(error.get("msg", "invalid value"))
+                details.append(f"{location}: {message}")
+            detail_text = "; ".join(details)
+            raise ConfigurationError(
+                f"Invalid configuration for {country_code}: {detail_text}"
+            ) from exc
+
+        config_dict: CountryConfigDict = cast(CountryConfigDict, validated.to_dict())
         return cls(config_dict)
 
     def __repr__(self) -> str:

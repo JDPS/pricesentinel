@@ -58,8 +58,8 @@ async def main() -> None:
         "--model",
         "-m",
         type=str,
-        default="baseline",
-        help="Model name to use (default: baseline)",
+        default="champion",
+        help="Model name to use (default: champion, resolved via champion.json)",
     )
 
     args = parser.parse_args()

@@ -91,3 +91,38 @@ def test_load_nonexistent_model_raises_error(tmp_path):
 
     with pytest.raises(FileNotFoundError):
         registry.load_model("XX", "missing_model", "run_x")
+
+
+def test_champion_roundtrip_and_resolution(tmp_path):
+    """Champion pointer should be persisted and resolved as default model token."""
+    registry = ModelRegistry(tmp_path / "models")
+    country = "PT"
+
+    champion_path = registry.set_champion(
+        country_code=country,
+        model_name="xgboost",
+        run_id="run_123",
+        trained_window={"start": "2024-01-01", "end": "2024-12-31"},
+        selection_metadata={"cv_method": "walk_forward"},
+    )
+
+    assert champion_path.exists()
+
+    champion = registry.get_champion(country)
+    assert champion is not None
+    assert champion["model_name"] == "xgboost"
+    assert champion["run_id"] == "run_123"
+
+    assert registry.resolve_model_name(country, "champion") == "xgboost"
+    assert registry.resolve_model_name(country, "auto") == "xgboost"
+    assert registry.resolve_model_name(country, None) == "xgboost"
+    assert registry.resolve_model_name(country, "baseline") == "baseline"
+
+
+def test_resolve_model_name_falls_back_when_no_champion(tmp_path):
+    """Champion resolution should use fallback when no champion file exists."""
+    registry = ModelRegistry(tmp_path / "models")
+
+    assert registry.resolve_model_name("PT", "champion") == "baseline"
+    assert registry.resolve_model_name("PT", None) == "baseline"
+    assert registry.resolve_model_name("PT", "xgboost") == "xgboost"

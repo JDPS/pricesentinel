@@ -258,9 +258,11 @@ class Pipeline:
                 If required inputs or dependencies are incorrectly configured or missing.
         """
         forecast_date = forecast_date or datetime.now().strftime("%Y-%m-%d")
+        resolved_model_name = self.model_registry.resolve_model_name(self.country_code, model_name)
 
         logger.info("=== Stage 5: Generating forecast ===")
         logger.info("Forecast date: %s", forecast_date)
+        logger.info("Requested model: %s | Resolved model: %s", model_name, resolved_model_name)
 
         # Find latest engineered feature file for this country
         pattern = f"{self.country_code}_electricity_features_*.csv"
@@ -304,22 +306,22 @@ class Pipeline:
         # Load model using Registry
         try:
             model, _ = self.model_registry.load_model(
-                self.country_code, model_name, run_id=self.run_id
+                self.country_code, resolved_model_name, run_id=self.run_id
             )
-            logger.info(f"Loaded model {model_name} for run_id {self.run_id}")
+            logger.info(f"Loaded model {resolved_model_name} for run_id {self.run_id}")
         except FileNotFoundError:
             logger.warning(
                 "Model for run_id %s not found; attempting to use latest model",
                 self.run_id,
             )
             try:
-                model, meta = self.model_registry.load_model(self.country_code, model_name)
+                model, meta = self.model_registry.load_model(self.country_code, resolved_model_name)
                 logger.info(f"Using latest available model (run_id={meta.get('run_id')})")
             except FileNotFoundError:
                 logger.warning(
                     "No trained models found for %s/%s; cannot generate forecast",
                     self.country_code,
-                    model_name,
+                    resolved_model_name,
                 )
                 logger.info("=== Stage 5 skipped ===\n")
                 return
@@ -333,7 +335,7 @@ class Pipeline:
                 "forecast_timestamp": forecast_timestamp,
                 "forecast_price_eur_mwh": preds,
                 "source_features_file": features_path.name,
-                "model_name": model_name,
+                "model_name": resolved_model_name,
                 "run_id": self.run_id,
             }
         )
@@ -352,7 +354,8 @@ class Pipeline:
             )
 
         out_name = (
-            f"{self.country_code}_forecast_{forecast_date_dt.strftime('%Y%m%d')}_{model_name}.csv"
+            f"{self.country_code}_forecast_"
+            f"{forecast_date_dt.strftime('%Y%m%d')}_{resolved_model_name}.csv"
         )
         out_path = self.repository.save_forecast(filtered, out_name)
 
@@ -422,7 +425,7 @@ class Pipeline:
             self.train_model(start_date, end_date, model_name=model_name)
 
             # Stage 5: Generate forecast
-            self.generate_forecast(forecast_date)
+            self.generate_forecast(forecast_date, model_name=model_name)
 
             logger.info(f"{'=' * 70}")
             logger.info(f"PIPELINE COMPLETE FOR {self.country_code}")

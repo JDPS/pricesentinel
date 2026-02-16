@@ -14,7 +14,7 @@ import logging
 import pickle
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,14 @@ class ModelRegistry:
     def _get_run_dir(self, country_code: str, model_name: str, run_id: str) -> Path:
         """Get the directory path for a specific model run."""
         return self.models_root / country_code / model_name / run_id
+
+    def _get_country_dir(self, country_code: str) -> Path:
+        """Get the root directory for a country inside the registry."""
+        return self.models_root / country_code
+
+    def _get_champion_path(self, country_code: str) -> Path:
+        """Get champion metadata path for a country."""
+        return self._get_country_dir(country_code) / "champion.json"
 
     def save_model(
         self,
@@ -193,3 +201,87 @@ class ModelRegistry:
                 if runs:
                     result[model_dir.name] = sorted(runs, reverse=True)
         return result
+
+    def set_champion(
+        self,
+        country_code: str,
+        model_name: str,
+        run_id: str,
+        trained_window: dict[str, str],
+        selection_metadata: dict[str, Any] | None = None,
+    ) -> Path:
+        """
+        Persist champion metadata for a country.
+
+        Args:
+            country_code: Country code.
+            model_name: Champion model name.
+            run_id: Champion run ID.
+            trained_window: Window dictionary with 'start' and 'end'.
+            selection_metadata: Optional metadata from selection workflow.
+
+        Returns:
+            Path to saved champion file.
+        """
+        champion_path = self._get_champion_path(country_code)
+        champion_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "country_code": country_code,
+            "model_name": model_name,
+            "run_id": run_id,
+            "trained_window": trained_window,
+            "selection_metadata": selection_metadata or {},
+        }
+        with open(champion_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, sort_keys=True)
+
+        logger.info(
+            "Champion updated for %s: model=%s run_id=%s",
+            country_code,
+            model_name,
+            run_id,
+        )
+        return champion_path
+
+    def get_champion(self, country_code: str) -> dict[str, Any] | None:
+        """
+        Load champion metadata for a country.
+
+        Args:
+            country_code: Country code.
+
+        Returns:
+            Champion metadata dictionary or None when unavailable.
+        """
+        path = self._get_champion_path(country_code)
+        if not path.exists():
+            return None
+
+        with open(path, encoding="utf-8") as f:
+            return cast(dict[str, Any], json.load(f))
+
+    def resolve_model_name(
+        self,
+        country_code: str,
+        requested_model_name: str | None,
+        fallback: str = "baseline",
+    ) -> str:
+        """
+        Resolve requested model name, supporting champion defaults.
+
+        Args:
+            country_code: Country code.
+            requested_model_name: User-requested model, or None.
+            fallback: Fallback model when no champion exists.
+
+        Returns:
+            Concrete model name to load.
+        """
+        token = (requested_model_name or "").strip().lower()
+        if token in {"", "champion", "auto", "default"}:
+            champion = self.get_champion(country_code)
+            if champion and champion.get("model_name"):
+                return str(champion["model_name"])
+            return fallback
+
+        return requested_model_name if requested_model_name is not None else fallback

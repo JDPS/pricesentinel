@@ -1,0 +1,23 @@
+# Champion selection policy for mock country
+
+allowed_models:
+  - baseline
+  - xgboost
+  - lightgbm
+
+cv_method: walk_forward
+initial_train_size: 240
+step_size: 24
+n_splits: 4
+
+metrics_priority:
+  - mae
+  - rmse
+  - stability
+  - model_name
+
+hpo:
+  enabled: false
+  shortlist_size: 1
+  n_trials: 10
+  cv_splits: 2

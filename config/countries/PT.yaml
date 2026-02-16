@@ -29,21 +29,21 @@ events:
   manual_events_path: data/PT/events/manual_events.csv
   persistence_required: 1
 
-  features:
-    use_cross_border_flows: false
-    feature_windows:
-      lags: [1, 2, 24, 48, 168]
-      rolling_windows: [24, 168]
-      rolling_stats: ["mean", "std"]
-    use_weather_features: true
-    use_gas_features: true
-    use_event_features: true
-    use_fourier_features: true
-    fourier_periods: [24, 168]
-    use_price_volatility: true
-    use_price_momentum: true
-    neighbors: []
-    custom_feature_plugins: []
+features:
+  use_cross_border_flows: false
+  feature_windows:
+    lags: [1, 2, 24, 48, 168]
+    rolling_windows: [24, 168]
+    rolling_stats: ["mean", "std"]
+  use_weather_features: true
+  use_gas_features: true
+  use_event_features: true
+  use_fourier_features: true
+  fourier_periods: [24, 168]
+  use_price_volatility: true
+  use_price_momentum: true
+  neighbors: []
+  custom_feature_plugins: []
 
 runtime_limits:
   price_max: 500.0
