@@ -11,6 +11,7 @@ of the forecasting workflow while remaining completely country-agnostic.
 
 import logging
 from datetime import date, datetime
+from statistics import NormalDist
 from typing import Any
 
 import numpy as np
@@ -264,13 +265,106 @@ class Pipeline:
         level = abs(float(np.mean(preds))) if len(preds) else 1.0
         return max(1.0, level * 0.05)
 
+    @staticmethod
+    def _coverage_to_sigma_scale(observed_coverage: float, nominal_coverage: float = 0.8) -> float:
+        """
+        Convert observed central interval coverage into a sigma scale factor.
+
+        Assumes residuals are approximately normal and solves:
+        observed = 2 * Phi(z_nominal / scale) - 1
+        """
+        obs = float(np.clip(observed_coverage, 0.01, 0.99))
+        nominal = float(np.clip(nominal_coverage, 0.02, 0.98))
+        norm = NormalDist()
+
+        z_nominal = norm.inv_cdf((1.0 + nominal) / 2.0)
+        z_observed = norm.inv_cdf((1.0 + obs) / 2.0)
+        if z_observed <= 0:
+            return 1.0
+        return float(z_nominal / z_observed)
+
+    def _resolve_interval_calibration(self, forecast_date: date) -> dict[str, Any]:
+        """
+        Derive interval calibration from recent daily scorecard coverage.
+        """
+        window_days = 30
+        min_samples = 7
+        nominal_coverage = 0.8
+
+        fallback: dict[str, Any] = {
+            "factor": 1.0,
+            "samples": 0,
+            "window_days": window_days,
+            "observed_coverage_10_90": None,
+            "nominal_coverage_10_90": nominal_coverage,
+            "source": "residual_proxy_normal",
+        }
+
+        scorecard_path = (
+            self.data_manager.get_processed_path() / "scorecards" / "daily_scorecard.csv"
+        )
+        if not scorecard_path.exists():
+            return fallback
+
+        try:
+            scorecard = pd.read_csv(scorecard_path)
+        except (OSError, pd.errors.ParserError, ValueError):
+            return fallback
+
+        required_cols = {"target_date", "status", "quantile_coverage_10_90"}
+        if not required_cols.issubset(set(scorecard.columns)):
+            return fallback
+
+        target_date = pd.to_datetime(scorecard["target_date"], errors="coerce").dt.date
+        history_end = forecast_date.fromordinal(forecast_date.toordinal() - 1)
+        history_start = history_end.fromordinal(history_end.toordinal() - (window_days - 1))
+        mask = (
+            target_date.notna()
+            & (target_date >= history_start)
+            & (target_date <= history_end)
+            & (scorecard["status"] == "ok")
+        )
+
+        coverage_series = pd.to_numeric(
+            scorecard.loc[mask, "quantile_coverage_10_90"], errors="coerce"
+        ).dropna()
+        samples = int(len(coverage_series))
+        if samples < min_samples:
+            fallback["samples"] = samples
+            return fallback
+
+        observed_coverage = float(coverage_series.mean())
+        raw_factor = self._coverage_to_sigma_scale(
+            observed_coverage=observed_coverage, nominal_coverage=nominal_coverage
+        )
+        bounded_factor = float(np.clip(raw_factor, 0.5, 3.0))
+
+        # Gradually trust calibration as more observations accumulate.
+        trust_weight = min(1.0, samples / 14.0)
+        factor = 1.0 + trust_weight * (bounded_factor - 1.0)
+
+        return {
+            "factor": round(float(factor), 6),
+            "samples": samples,
+            "window_days": window_days,
+            "observed_coverage_10_90": round(observed_coverage, 6),
+            "nominal_coverage_10_90": nominal_coverage,
+            "source": "scorecard_coverage_calibrated",
+        }
+
     def _add_prediction_intervals(
-        self, forecast_df: pd.DataFrame, preds: np.ndarray, metadata: dict[str, Any]
+        self,
+        forecast_df: pd.DataFrame,
+        preds: np.ndarray,
+        metadata: dict[str, Any],
+        forecast_date: str,
     ) -> pd.DataFrame:
         """
         Add p10/p50/p90 interval columns using a normal residual proxy.
         """
         sigma = self._resolve_prediction_sigma(preds, metadata)
+        calibration = self._resolve_interval_calibration(date.fromisoformat(forecast_date))
+        sigma = sigma * float(calibration["factor"])
         z_10_90 = 1.2815515655446004
 
         forecast_df = forecast_df.copy()
@@ -284,7 +378,12 @@ class Pipeline:
         forecast_df["forecast_interval_width_eur_mwh"] = (
             forecast_df["forecast_p90_eur_mwh"] - forecast_df["forecast_p10_eur_mwh"]
         )
-        forecast_df["uncertainty_source"] = "residual_proxy_normal"
+        forecast_df["uncertainty_source"] = calibration["source"]
+        forecast_df["interval_calibration_factor"] = calibration["factor"]
+        forecast_df["interval_calibration_samples"] = calibration["samples"]
+        forecast_df["interval_calibration_window_days"] = calibration["window_days"]
+        forecast_df["interval_observed_coverage_10_90"] = calibration["observed_coverage_10_90"]
+        forecast_df["interval_nominal_coverage_10_90"] = calibration["nominal_coverage_10_90"]
         return forecast_df
 
     def generate_forecast(
@@ -395,7 +494,9 @@ class Pipeline:
                 "run_id": self.run_id,
             }
         )
-        forecast_df = self._add_prediction_intervals(forecast_df, preds, model_meta)
+        forecast_df = self._add_prediction_intervals(
+            forecast_df, preds, model_meta, forecast_date=forecast_date
+        )
 
         # Filter by requested forecast date
         # Interpret forecast_date as a simple calendar date (no timezone semantics needed)
