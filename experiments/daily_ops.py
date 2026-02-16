@@ -21,6 +21,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from core.logging_config import setup_logging
+from core.monitoring import generate_health_summary
 from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 
@@ -273,6 +274,7 @@ async def _run_forecast_mode(args: argparse.Namespace) -> dict[str, Any]:
 
     forecast_name = f"{country_code}_forecast_{target_date.replace('-', '')}_{resolved_model}.csv"
     forecast_path = pipeline.data_manager.get_processed_path() / "forecasts" / forecast_name
+    health = generate_health_summary(country_code, as_of_date=datetime.now(UTC).date().isoformat())
 
     return {
         "mode": "forecast",
@@ -282,6 +284,8 @@ async def _run_forecast_mode(args: argparse.Namespace) -> dict[str, Any]:
         "resolved_model": resolved_model,
         "forecast_path": str(forecast_path.as_posix()),
         "exists": forecast_path.exists(),
+        "health_summary_json": health["json_path"],
+        "health_summary_markdown": health["markdown_path"],
     }
 
 
@@ -294,6 +298,7 @@ def _run_evaluate_mode(args: argparse.Namespace) -> dict[str, Any]:
 
     record = _evaluate_daily(pipeline.data_manager, country_code, target_date)
     csv_path, jsonl_path = _upsert_score_record(pipeline.data_manager, record)
+    health = generate_health_summary(country_code, as_of_date=target_date)
 
     return {
         "mode": "evaluate",
@@ -313,6 +318,24 @@ def _run_evaluate_mode(args: argparse.Namespace) -> dict[str, Any]:
         },
         "scorecard_csv": str(csv_path.as_posix()),
         "scorecard_jsonl": str(jsonl_path.as_posix()),
+        "health_summary_json": health["json_path"],
+        "health_summary_markdown": health["markdown_path"],
+    }
+
+
+def _run_health_mode(args: argparse.Namespace) -> dict[str, Any]:
+    country_code = args.country.upper()
+    as_of_date = args.as_of_date or datetime.now(UTC).date().isoformat()
+    auto_register_countries()
+    health = generate_health_summary(country_code, as_of_date=as_of_date)
+
+    return {
+        "mode": "health",
+        "country_code": country_code,
+        "as_of_date": as_of_date,
+        "status": health["summary"]["alerts"]["overall_status"],
+        "json_path": health["json_path"],
+        "markdown_path": health["markdown_path"],
     }
 
 
@@ -347,6 +370,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Date to evaluate (YYYY-MM-DD). Default: yesterday UTC",
     )
 
+    health = sub.add_parser("health", help="Generate daily monitoring summary")
+    health.add_argument("--country", required=True, help="Country code (e.g. PT)")
+    health.add_argument("--as-of-date", help="Summary date (YYYY-MM-DD). Default: today UTC")
+
     return parser
 
 
@@ -356,8 +383,10 @@ async def main() -> None:
 
     if args.command == "forecast":
         result = await _run_forecast_mode(args)
-    else:
+    elif args.command == "evaluate":
         result = _run_evaluate_mode(args)
+    else:
+        result = _run_health_mode(args)
 
     sys.stdout.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
 

@@ -1,0 +1,14 @@
+# Monitoring thresholds for Portugal
+
+status_thresholds:
+  mae_warn: 18.0
+  mae_critical: 28.0
+  drift_warn_pct: 0.20
+  drift_critical_pct: 0.35
+  min_coverage_7d: 0.70
+  min_coverage_30d: 0.80
+
+freshness_hours:
+  electricity: 36
+  weather: 48
+  gas: 72

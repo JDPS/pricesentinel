@@ -15,3 +15,5 @@ PriceSentinel is a production-grade, multi-country energy price forecasting syst
 - [Getting Started](getting-started/installation.md)
 - [User Guide](user-guide/running-pipeline.md)
 - [API Reference](api/core/abstractions.md)
+- [Country Onboarding](COUNTRY_ONBOARDING.md)
+- [Operations Runbooks](RUNBOOKS.md)

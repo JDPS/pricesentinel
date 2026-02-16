@@ -1,0 +1,14 @@
+# Monitoring thresholds for Mock Country
+
+status_thresholds:
+  mae_warn: 25.0
+  mae_critical: 40.0
+  drift_warn_pct: 0.25
+  drift_critical_pct: 0.40
+  min_coverage_7d: 0.60
+  min_coverage_30d: 0.70
+
+freshness_hours:
+  electricity: 48
+  weather: 72
+  gas: 96
