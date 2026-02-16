@@ -42,7 +42,14 @@ class DailyScoreRecord:
     mape: float | None
     directional_accuracy: float | None
     peak_hour_abs_error: float | None
-    generated_at_utc: str
+    generated_at_utc: str = ""
+    quantile_coverage_10_90: float | None = None
+    pinball_loss_p10: float | None = None
+    pinball_loss_p50: float | None = None
+    pinball_loss_p90: float | None = None
+    pinball_loss_avg: float | None = None
+    interval_width_avg: float | None = None
+    uncertainty_flag: str | None = None
 
 
 def _iso_today_utc() -> date:
@@ -154,6 +161,12 @@ def _safe_mape(y_true: pd.Series, y_pred: pd.Series) -> float | None:
     return float(ratio.mean() * 100.0)
 
 
+def _pinball_loss(y_true: pd.Series, y_q: pd.Series, quantile: float) -> float:
+    error = y_true - y_q
+    loss = np.maximum(quantile * error, (quantile - 1.0) * error)
+    return float(np.mean(loss))
+
+
 def _evaluate_daily(
     data_manager: Any,
     country_code: str,
@@ -235,6 +248,41 @@ def _evaluate_daily(
     peak_idx = y_true.idxmax()
     peak_hour_abs_error = float(abs(y_true.loc[peak_idx] - y_pred.loc[peak_idx]))
 
+    q_cov = None
+    pinball_p10 = None
+    pinball_p50 = None
+    pinball_p90 = None
+    pinball_avg = None
+    interval_width_avg = None
+    uncertainty_flag = None
+
+    quantile_cols = {"forecast_p10_eur_mwh", "forecast_p50_eur_mwh", "forecast_p90_eur_mwh"}
+    if quantile_cols.issubset(set(merged.columns)):
+        p10 = pd.to_numeric(merged["forecast_p10_eur_mwh"], errors="coerce")
+        p50 = pd.to_numeric(merged["forecast_p50_eur_mwh"], errors="coerce")
+        p90 = pd.to_numeric(merged["forecast_p90_eur_mwh"], errors="coerce")
+        valid = p10.notna() & p50.notna() & p90.notna()
+
+        if valid.any():
+            y_valid = y_true[valid]
+            p10_valid = p10[valid]
+            p50_valid = p50[valid]
+            p90_valid = p90[valid]
+
+            q_cov = float(((y_valid >= p10_valid) & (y_valid <= p90_valid)).mean())
+            pinball_p10 = _pinball_loss(y_valid, p10_valid, 0.10)
+            pinball_p50 = _pinball_loss(y_valid, p50_valid, 0.50)
+            pinball_p90 = _pinball_loss(y_valid, p90_valid, 0.90)
+            pinball_avg = float(np.mean([pinball_p10, pinball_p50, pinball_p90]))
+            interval_width_avg = float((p90_valid - p10_valid).mean())
+
+            if q_cov < 0.60:
+                uncertainty_flag = "caution_low_coverage"
+            elif interval_width_avg > 4.0 * float(mean_absolute_error(y_true, y_pred)):
+                uncertainty_flag = "caution_wide_interval"
+            else:
+                uncertainty_flag = "normal"
+
     return DailyScoreRecord(
         country_code=country_code,
         target_date=target_date,
@@ -248,6 +296,13 @@ def _evaluate_daily(
         mape=_safe_mape(y_true, y_pred),
         directional_accuracy=_directional_accuracy(y_true, y_pred),
         peak_hour_abs_error=peak_hour_abs_error,
+        quantile_coverage_10_90=q_cov,
+        pinball_loss_p10=pinball_p10,
+        pinball_loss_p50=pinball_p50,
+        pinball_loss_p90=pinball_p90,
+        pinball_loss_avg=pinball_avg,
+        interval_width_avg=interval_width_avg,
+        uncertainty_flag=uncertainty_flag,
         generated_at_utc=datetime.now(UTC).isoformat(),
     )
 
@@ -315,6 +370,10 @@ def _run_evaluate_mode(args: argparse.Namespace) -> dict[str, Any]:
             "mape": record.mape,
             "directional_accuracy": record.directional_accuracy,
             "peak_hour_abs_error": record.peak_hour_abs_error,
+            "quantile_coverage_10_90": record.quantile_coverage_10_90,
+            "pinball_loss_avg": record.pinball_loss_avg,
+            "interval_width_avg": record.interval_width_avg,
+            "uncertainty_flag": record.uncertainty_flag,
         },
         "scorecard_csv": str(csv_path.as_posix()),
         "scorecard_jsonl": str(jsonl_path.as_posix()),

@@ -7,6 +7,9 @@ status_thresholds:
   drift_critical_pct: 0.35
   min_coverage_7d: 0.70
   min_coverage_30d: 0.80
+  quantile_coverage_warn: 0.60
+  pinball_warn: 8.0
+  interval_width_warn: 80.0
 
 freshness_hours:
   electricity: 36

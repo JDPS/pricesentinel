@@ -78,6 +78,9 @@ def test_evaluate_daily_computes_metrics_when_data_complete(tmp_path, monkeypatc
         {
             "forecast_timestamp": timestamps,
             "forecast_price_eur_mwh": [50.0] * 24,
+            "forecast_p10_eur_mwh": [48.0] * 24,
+            "forecast_p50_eur_mwh": [50.0] * 24,
+            "forecast_p90_eur_mwh": [52.0] * 24,
             "model_name": ["baseline"] * 24,
             "run_id": ["run_x"] * 24,
         }
@@ -104,3 +107,6 @@ def test_evaluate_daily_computes_metrics_when_data_complete(tmp_path, monkeypatc
     assert record.mae == 2.0
     assert record.rmse == 2.0
     assert record.model_name == "baseline"
+    assert record.quantile_coverage_10_90 == 1.0
+    assert record.pinball_loss_avg is not None
+    assert record.interval_width_avg == 4.0

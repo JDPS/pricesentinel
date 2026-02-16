@@ -13,6 +13,7 @@ import logging
 from datetime import date, datetime
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from config.country_registry import CountryConfig
@@ -233,6 +234,59 @@ class Pipeline:
 
         logger.info("=== Stage 4 complete ===\n")
 
+    @staticmethod
+    def _resolve_prediction_sigma(preds: np.ndarray, metadata: dict[str, Any]) -> float:
+        """
+        Resolve an uncertainty scale (sigma) for prediction intervals.
+
+        Prefers validation RMSE from model metadata, then training RMSE/MAE,
+        and falls back to prediction spread.
+        """
+        metrics = metadata.get("metrics", {}) if isinstance(metadata, dict) else {}
+        if not isinstance(metrics, dict):
+            metrics = {}
+
+        for key in ("val_rmse", "train_rmse", "rmse"):
+            value = metrics.get(key)
+            if isinstance(value, int | float) and float(value) > 0:
+                return float(value)
+
+        for key in ("val_mae", "train_mae", "mae"):
+            value = metrics.get(key)
+            if isinstance(value, int | float) and float(value) > 0:
+                # Convert MAE to an equivalent normal sigma approximation
+                return float(value) * 1.2533141373155001
+
+        spread = float(np.std(preds)) if len(preds) > 1 else 0.0
+        if spread > 0:
+            return spread
+
+        level = abs(float(np.mean(preds))) if len(preds) else 1.0
+        return max(1.0, level * 0.05)
+
+    def _add_prediction_intervals(
+        self, forecast_df: pd.DataFrame, preds: np.ndarray, metadata: dict[str, Any]
+    ) -> pd.DataFrame:
+        """
+        Add p10/p50/p90 interval columns using a normal residual proxy.
+        """
+        sigma = self._resolve_prediction_sigma(preds, metadata)
+        z_10_90 = 1.2815515655446004
+
+        forecast_df = forecast_df.copy()
+        forecast_df["forecast_p50_eur_mwh"] = forecast_df["forecast_price_eur_mwh"]
+        forecast_df["forecast_p10_eur_mwh"] = (
+            forecast_df["forecast_price_eur_mwh"] - z_10_90 * sigma
+        )
+        forecast_df["forecast_p90_eur_mwh"] = (
+            forecast_df["forecast_price_eur_mwh"] + z_10_90 * sigma
+        )
+        forecast_df["forecast_interval_width_eur_mwh"] = (
+            forecast_df["forecast_p90_eur_mwh"] - forecast_df["forecast_p10_eur_mwh"]
+        )
+        forecast_df["uncertainty_source"] = "residual_proxy_normal"
+        return forecast_df
+
     def generate_forecast(
         self, forecast_date: str | None = None, model_name: str = DEFAULT_MODEL_NAME
     ) -> None:
@@ -305,7 +359,7 @@ class Pipeline:
 
         # Load model using Registry
         try:
-            model, _ = self.model_registry.load_model(
+            model, model_meta = self.model_registry.load_model(
                 self.country_code, resolved_model_name, run_id=self.run_id
             )
             logger.info(f"Loaded model {resolved_model_name} for run_id {self.run_id}")
@@ -315,8 +369,10 @@ class Pipeline:
                 self.run_id,
             )
             try:
-                model, meta = self.model_registry.load_model(self.country_code, resolved_model_name)
-                logger.info(f"Using latest available model (run_id={meta.get('run_id')})")
+                model, model_meta = self.model_registry.load_model(
+                    self.country_code, resolved_model_name
+                )
+                logger.info(f"Using latest available model (run_id={model_meta.get('run_id')})")
             except FileNotFoundError:
                 logger.warning(
                     "No trained models found for %s/%s; cannot generate forecast",
@@ -339,6 +395,7 @@ class Pipeline:
                 "run_id": self.run_id,
             }
         )
+        forecast_df = self._add_prediction_intervals(forecast_df, preds, model_meta)
 
         # Filter by requested forecast date
         # Interpret forecast_date as a simple calendar date (no timezone semantics needed)

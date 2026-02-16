@@ -69,6 +69,9 @@ def test_generate_forecast_uses_latest_features_and_model(tmp_path, mock_country
 
     forecast_df = pd.read_csv(forecast_files[0], parse_dates=["forecast_timestamp"])
     assert "forecast_price_eur_mwh" in forecast_df.columns
+    assert "forecast_p10_eur_mwh" in forecast_df.columns
+    assert "forecast_p50_eur_mwh" in forecast_df.columns
+    assert "forecast_p90_eur_mwh" in forecast_df.columns
     # All forecasts should correspond to the requested date
     assert all(forecast_df["forecast_timestamp"].dt.date.astype(str) == forecast_date)
 

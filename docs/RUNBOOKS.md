@@ -76,6 +76,21 @@ Actions:
 4. If needed retrain directly:
    - `uv run python experiments/run_training.py --country {CODE} --train-start ... --train-end ...`
 
+## Alert: uncertainty caution (`uncertainty_coverage` / `pinball_loss`)
+
+Symptoms:
+
+- health summary has warn conditions related to quantile coverage or pinball loss.
+
+Actions:
+
+1. Inspect interval outputs in forecast CSV:
+   - `forecast_p10_eur_mwh`, `forecast_p50_eur_mwh`, `forecast_p90_eur_mwh`.
+2. Check daily scorecard uncertainty columns:
+   - `quantile_coverage_10_90`, `pinball_loss_avg`, `interval_width_avg`.
+3. Re-run champion selection and retraining for a fresher window.
+4. If intervals are consistently too wide/narrow, tune model/hyperparameters and re-evaluate.
+
 ## Alert: coverage degradation
 
 Symptoms:

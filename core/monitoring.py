@@ -27,6 +27,9 @@ DEFAULT_MONITORING_CONFIG: dict[str, Any] = {
         "drift_critical_pct": 0.35,
         "min_coverage_7d": 0.70,
         "min_coverage_30d": 0.80,
+        "quantile_coverage_warn": 0.60,
+        "pinball_warn": 8.0,
+        "interval_width_warn": 80.0,
     },
     "freshness_hours": {
         "electricity": 48,
@@ -70,6 +73,13 @@ def _read_scorecard(manager: CountryDataManager) -> pd.DataFrame:
     for col in ("mae", "rmse", "mape", "directional_accuracy", "peak_hour_abs_error"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+    for col in (
+        "quantile_coverage_10_90",
+        "pinball_loss_avg",
+        "interval_width_avg",
+    ):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
 
 
@@ -89,6 +99,9 @@ def _rolling_summary(df: pd.DataFrame) -> dict[str, Any]:
             "mae": None,
             "rmse": None,
             "mape": None,
+            "quantile_coverage_10_90": None,
+            "pinball_loss_avg": None,
+            "interval_width_avg": None,
         }
 
     ok_df = df[df.get("status") == "ok"] if "status" in df.columns else df
@@ -106,6 +119,21 @@ def _rolling_summary(df: pd.DataFrame) -> dict[str, Any]:
         ),
         "mape": (
             float(ok_df["mape"].mean()) if "mape" in ok_df.columns and not ok_df.empty else None
+        ),
+        "quantile_coverage_10_90": (
+            float(ok_df["quantile_coverage_10_90"].mean())
+            if "quantile_coverage_10_90" in ok_df.columns and not ok_df.empty
+            else None
+        ),
+        "pinball_loss_avg": (
+            float(ok_df["pinball_loss_avg"].mean())
+            if "pinball_loss_avg" in ok_df.columns and not ok_df.empty
+            else None
+        ),
+        "interval_width_avg": (
+            float(ok_df["interval_width_avg"].mean())
+            if "interval_width_avg" in ok_df.columns and not ok_df.empty
+            else None
         ),
     }
 
@@ -191,6 +219,21 @@ def _derive_alert_status(
     if coverage_30d < float(thresholds["min_coverage_30d"]):
         add("warn", "coverage_30d", "30d successful evaluation coverage below threshold")
 
+    quantile_cov = summary_7d.get("quantile_coverage_10_90")
+    if isinstance(quantile_cov, float):
+        if quantile_cov < float(thresholds["quantile_coverage_warn"]):
+            add("warn", "uncertainty_coverage", "10-90 quantile coverage below threshold")
+
+    pinball_avg = summary_7d.get("pinball_loss_avg")
+    if isinstance(pinball_avg, float):
+        if pinball_avg > float(thresholds["pinball_warn"]):
+            add("warn", "pinball_loss", f"7d pinball loss {pinball_avg:.3f} above threshold")
+
+    interval_width = summary_7d.get("interval_width_avg")
+    if isinstance(interval_width, float):
+        if interval_width > float(thresholds["interval_width_warn"]):
+            add("warn", "uncertainty_width", "Average prediction interval width is high")
+
     if drift_pct is not None:
         if drift_pct > float(thresholds["drift_critical_pct"]):
             add("critical", "drift", f"MAE drift {drift_pct:.3f} > critical threshold")
@@ -258,6 +301,9 @@ def _write_markdown(path: Path, summary: dict[str, Any]) -> None:
         f"- 30d coverage: {rolling['30d']['coverage']}",
         f"- 30d MAE: {rolling['30d']['mae']}",
         f"- MAE drift pct: {summary['drift']['mae_drift_pct']}",
+        f"- 7d quantile coverage (10-90): {rolling['7d']['quantile_coverage_10_90']}",
+        f"- 7d pinball loss avg: {rolling['7d']['pinball_loss_avg']}",
+        f"- 7d interval width avg: {rolling['7d']['interval_width_avg']}",
         "",
         "## Freshness",
         "",
