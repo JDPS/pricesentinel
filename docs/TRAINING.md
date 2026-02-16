@@ -167,3 +167,41 @@ to retrain on existing cleaned data without refetching.
   - `models/{CODE}/{model_name}/{run_id}/metrics.json`
 
 These paths are managed by `CountryDataManager` and `SklearnRegressorTrainer`.
+
+---
+
+## 7. Forecast Uncertainty and Calibration
+
+Forecast generation (`Pipeline.generate_forecast`) now writes a stable interval
+schema alongside point forecasts:
+
+- `forecast_p10_eur_mwh`
+- `forecast_p50_eur_mwh`
+- `forecast_p90_eur_mwh`
+- `forecast_interval_width_eur_mwh`
+- `uncertainty_source`
+
+Calibration metadata is also stored in each forecast row:
+
+- `interval_calibration_factor`
+- `interval_calibration_samples`
+- `interval_calibration_window_days`
+- `interval_observed_coverage_10_90`
+- `interval_nominal_coverage_10_90`
+
+### How interval calibration works
+
+1. A base residual scale (`sigma`) is inferred from model metrics metadata:
+   - prefer `val_rmse`, then `train_rmse`/`rmse`, then MAE-derived fallback.
+2. Recent empirical interval coverage is read from:
+   - `data/{CODE}/processed/scorecards/daily_scorecard.csv`
+   - uses `status == "ok"` rows with `quantile_coverage_10_90`
+   - rolling window: last 30 days, minimum 7 samples.
+3. A calibration factor rescales `sigma` so observed 10-90 coverage trends
+   toward nominal 0.80 coverage.
+4. Safety constraints apply:
+   - calibration factor is clipped to `[0.5, 3.0]`
+   - factor trust is ramped as sample size grows.
+
+If insufficient scorecard history exists, intervals fall back to
+`uncertainty_source = residual_proxy_normal`.

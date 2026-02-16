@@ -72,9 +72,21 @@ Country-agnostic pipeline that coordinates all stages:
 2. **Data Cleaning**: Verification and normalisation (Implemented)
 3. **Feature Engineering**: Generate model features (Implemented)
 4. **Model Training**: Train forecasting models (Implemented)
-5. **Forecast Generation**: Produce predictions (Implemented)
+5. **Forecast Generation**: Produce predictions with uncertainty intervals (Implemented)
 
-The pipeline never contains country-specific logic — it only calls registered adapters.
+The pipeline never contains country-specific logic - it only calls registered adapters.
+
+### Forecast Uncertainty Layer
+
+Forecast CSV outputs include point and interval estimates:
+
+- `forecast_price_eur_mwh`
+- `forecast_p10_eur_mwh`, `forecast_p50_eur_mwh`, `forecast_p90_eur_mwh`
+- interval metadata (`uncertainty_source`, calibration factor and sample context)
+
+Intervals are generated from model residual proxies, then calibrated using recent
+observed 10-90 interval coverage from the daily scorecard when enough evaluation
+history is available.
 
 ### Data Fetchers
 
@@ -248,6 +260,12 @@ To add a new data source (e.g. solar forecasts):
 
 - Baseline Scikit-Learn trainer
 - Basic forecasting pipeline
+
+### Daily Ops + Monitoring (Phase 8+)
+
+- Daily forecast/evaluate loop (`experiments/daily_ops.py`)
+- Rolling health summary and threshold alerts (`core/monitoring.py`)
+- Uncertainty-aware monitoring via interval coverage/pinball metrics
 
 ## Future Enhancements
 

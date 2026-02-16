@@ -20,6 +20,10 @@ fetchers, and operational automation for a new market.
   - `config/selection_policies/{CODE}.yaml`
 - Create monitoring thresholds:
   - `config/monitoring/{CODE}.yaml`
+  - include uncertainty thresholds:
+    - `quantile_coverage_warn`
+    - `pinball_warn`
+    - `interval_width_warn`
 - Implement and register adapters:
   - `data_fetchers/{code}/`
   - registration in `data_fetchers/__init__.py`

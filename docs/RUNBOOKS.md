@@ -80,16 +80,28 @@ Actions:
 
 Symptoms:
 
-- health summary has warn conditions related to quantile coverage or pinball loss.
+- health summary has warn conditions related to quantile coverage, pinball loss,
+  or interval width (`uncertainty_width`).
 
 Actions:
 
 1. Inspect interval outputs in forecast CSV:
-   - `forecast_p10_eur_mwh`, `forecast_p50_eur_mwh`, `forecast_p90_eur_mwh`.
+   - `forecast_p10_eur_mwh`, `forecast_p50_eur_mwh`, `forecast_p90_eur_mwh`
+   - `forecast_interval_width_eur_mwh`
+   - calibration metadata:
+     - `uncertainty_source`
+     - `interval_calibration_factor`
+     - `interval_calibration_samples`
+     - `interval_observed_coverage_10_90`
+     - `interval_nominal_coverage_10_90`
 2. Check daily scorecard uncertainty columns:
    - `quantile_coverage_10_90`, `pinball_loss_avg`, `interval_width_avg`.
-3. Re-run champion selection and retraining for a fresher window.
-4. If intervals are consistently too wide/narrow, tune model/hyperparameters and re-evaluate.
+3. Confirm calibration has enough observations:
+   - if `interval_calibration_samples < 7`, interval calibration is not active yet
+     (forecasts use baseline residual proxy); continue evaluate runs until history builds.
+4. Re-run champion selection and retraining for a fresher window.
+5. If calibration factor is persistently extreme (near lower/upper clip), revisit
+   feature quality and model residual behavior, then re-evaluate.
 
 ## Alert: coverage degradation
 

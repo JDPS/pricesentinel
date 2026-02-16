@@ -7,6 +7,7 @@ PriceSentinel is a production-grade, multi-country energy price forecasting syst
 - **Multi-Country Support**: extensible architecture for adding new regions.
 - **Event Awareness**: Integration of public holidays and manual event overrides.
 - **Robust Data Pipeline**: Type-safe, validated data fetching and processing.
+- **Uncertainty-Aware Forecasts**: Point forecasts plus calibrated p10/p50/p90 intervals.
 - **Modern Stack**: Built with Python 3.13, Pandas, Scikit-Learn, and Pydantic.
 - **Async Architecture**: High-performance parallel data fetching using `httpx` and `asyncio`.
 
@@ -17,3 +18,4 @@ PriceSentinel is a production-grade, multi-country energy price forecasting syst
 - [API Reference](api/core/abstractions.md)
 - [Country Onboarding](COUNTRY_ONBOARDING.md)
 - [Operations Runbooks](RUNBOOKS.md)
+- [Training and Features](TRAINING.md)

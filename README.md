@@ -14,7 +14,8 @@
 - **Event-aware forecasting**: Incorporates holidays, DST transitions, and manual events
 - **Data quality guards**: Cleaning and basic validation for electricity, weather, and gas data
 - **Feature engineering & training**: Baseline feature set and model training (scikit-learn) for mock country
-- **Comprehensive monitoring**: Planned monitoring of data quality, model performance, and alerts
+- **Operational monitoring**: Daily health summaries, threshold alerts, and runbooks
+- **Uncertainty-aware forecasts**: Stable p10/p50/p90 intervals with scorecard-driven calibration
 - **Country abstraction**: Add new countries with minimal code changes
 
 ## Current Status
@@ -23,7 +24,7 @@
 - **Core Capabilities**:
   - **Inference**: Day-ahead price forecasting with runtime data guards.
   - **Validation**: Time Series Cross-Validation and Backtesting.
-  - **Quality**: Windows-compatible automation, 100% test pass rate, and CI/CD guardrails established.
+  - **Quality**: Windows-compatible automation, CI/CD guardrails, and daily ops monitoring.
 - **Phases 6–7**: Inference & Training Optimization (Complete).
 - **Phases 8–10**: CI/CD (Complete). Monitoring and Deployment (Next).
 
