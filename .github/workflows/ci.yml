@@ -93,7 +93,7 @@ jobs:
       # Upload artifacts (only from ubuntu)
       - name: Upload distribution artifacts
         if: matrix.os == 'ubuntu-latest' && matrix.extras == 'all-extras'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
@@ -133,7 +133,7 @@ jobs:
 
       - name: Upload security reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: security-reports
           path: |
