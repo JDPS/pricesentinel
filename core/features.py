@@ -28,6 +28,37 @@ from models.base import BaseTrainer
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_numeric_values(df: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
+    """
+    Replace +/-inf with NaN and clip excessively large finite floats.
+
+    Returns:
+        tuple of (sanitized_df, inf_values_replaced_count, clipped_values_count)
+    """
+    numeric_cols = list(df.select_dtypes(include="number").columns)
+    if not numeric_cols:
+        return df, 0, 0
+
+    sanitized = df.copy()
+    numeric = sanitized[numeric_cols].copy()
+
+    inf_count = int(np.isinf(numeric.to_numpy(dtype="float64", copy=False)).sum())
+    if inf_count > 0:
+        numeric = numeric.replace([np.inf, -np.inf], np.nan)
+
+    float_cols = list(numeric.select_dtypes(include=["float16", "float32", "float64"]).columns)
+    clipped_count = 0
+    if float_cols:
+        float_limit = float(np.finfo(np.float32).max)
+        too_large = numeric[float_cols].abs() > float_limit
+        clipped_count = int(too_large.sum().sum())
+        if clipped_count > 0:
+            numeric.loc[:, float_cols] = numeric[float_cols].clip(-float_limit, float_limit)
+
+    sanitized.loc[:, numeric_cols] = numeric
+    return sanitized, inf_count, clipped_count
+
+
 class FeatureEngineer:
     """
     Feature engineering for training models.
@@ -289,6 +320,15 @@ class FeatureEngineer:
         if "date" in df.columns:
             df = df.drop(columns=["date"])
 
+        df, inf_count, clipped_count = _sanitize_numeric_values(df)
+        if inf_count > 0 or clipped_count > 0:
+            logger.warning(
+                "Sanitized feature matrix for %s: replaced %d inf values, clipped %d large values",
+                self.country_code,
+                inf_count,
+                clipped_count,
+            )
+
         path = self.repository.save_data(df, "electricity_features", start_date, end_date)
 
         logger.info(
@@ -331,6 +371,14 @@ class FeatureEngineer:
         # Use only numeric feature columns (exclude strings like 'market')
         x = df[feature_cols].select_dtypes(include="number")
         y = df[target_col]
+        x, inf_count, clipped_count = _sanitize_numeric_values(x)
+        if inf_count > 0 or clipped_count > 0:
+            logger.warning(
+                "Sanitized training matrix for %s: replaced %d inf values, clipped %d large values",
+                self.country_code,
+                inf_count,
+                clipped_count,
+            )
 
         if x.empty or x.shape[1] == 0:
             raise ValueError("No numeric feature columns available for training")

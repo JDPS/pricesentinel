@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 
 from core.data_manager import CountryDataManager
-from core.features import FeatureEngineer
+from core.features import FeatureEngineer, _sanitize_numeric_values
 from core.repository import CsvDataRepository
 from models.base import BaseTrainer
 
@@ -479,3 +479,23 @@ def test_train_with_trainer_guardrail_can_skip_save(tmp_path, monkeypatch):
 
     # With the guardrail env var set and bad metrics, save should be skipped
     assert trainer.saved is False
+
+
+def test_sanitize_numeric_values_replaces_inf_and_clips_large_values() -> None:
+    df = pd.DataFrame(
+        {
+            "feature": [1.0, np.inf, -np.inf, 1e50],
+            "other": [1, 2, 3, 4],
+            "label": ["a", "b", "c", "d"],
+        }
+    )
+
+    out, inf_count, clipped_count = _sanitize_numeric_values(df)
+
+    assert inf_count == 2
+    assert clipped_count >= 1
+    numeric = out.select_dtypes(include="number").to_numpy(dtype="float64", copy=False)
+    assert not np.isinf(numeric).any()
+    assert pd.isna(out.loc[1, "feature"])
+    assert pd.isna(out.loc[2, "feature"])
+    assert abs(float(out.loc[3, "feature"])) <= float(np.finfo(np.float32).max)

@@ -18,11 +18,12 @@ from typing import TYPE_CHECKING, Any, cast
 import pandas as pd
 import yaml
 
+from core.features import _sanitize_numeric_values
 from core.logging_config import setup_logging
 from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
 from experiments.model_comparison import ModelComparison
-from models import get_trainer
+from models import get_trainer, list_registered_trainers
 from models.model_registry import ModelRegistry
 
 if TYPE_CHECKING:
@@ -96,6 +97,13 @@ def _load_matrix(
 
     feature_cols = [c for c in df_clean.columns if c not in ("timestamp", "target_price")]
     x = df_clean[feature_cols].select_dtypes(include="number")
+    x, inf_count, clipped_count = _sanitize_numeric_values(x)
+    if inf_count > 0 or clipped_count > 0:
+        logger.warning(
+            "Sanitized selection matrix: replaced %d inf values, clipped %d large values",
+            inf_count,
+            clipped_count,
+        )
     y = df_clean["target_price"]
 
     if len(x) < 48:
@@ -130,6 +138,21 @@ def _map_model_to_hpo_algorithm(model_name: str) -> str | None:
         "lightgbm": "lightgbm",
     }
     return mapping.get(model_name)
+
+
+def _resolve_allowed_models(
+    requested_models: list[str],
+    available_models: set[str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """
+    Keep only models available in the local trainer registry.
+    """
+    available = (
+        available_models if available_models is not None else set(list_registered_trainers())
+    )
+    allowed = [m for m in requested_models if m in available]
+    missing = [m for m in requested_models if m not in available]
+    return allowed, missing
 
 
 def _train_selected_model(
@@ -189,6 +212,19 @@ async def main() -> None:
     auto_register_countries()
 
     policy, policy_path = _load_policy(country_code, args.policy_file)
+    resolved_models, missing_models = _resolve_allowed_models(list(policy["allowed_models"]))
+    if missing_models:
+        logger.warning(
+            "Skipping unavailable models for %s: %s",
+            country_code,
+            ", ".join(missing_models),
+        )
+    if not resolved_models:
+        raise ValueError(
+            "No allowed models are currently available in this environment. "
+            "Install optional ML extras or update selection policy."
+        )
+    policy["allowed_models"] = resolved_models
     logger.info("Selection policy loaded for %s: %s", country_code, policy)
 
     pipeline = PipelineBuilder.create_pipeline(country_code)
@@ -212,7 +248,18 @@ async def main() -> None:
 
     tuned_configs: dict[str, dict[str, Any]] = {}
     hpo_policy = dict(policy.get("hpo", {}))
+    optuna_hpo_cls: Any = None
     if bool(hpo_policy.get("enabled", False)):
+        try:
+            from models.hpo import OptunaHPO as _OptunaHPO
+
+            optuna_hpo_cls = _OptunaHPO
+        except ImportError:
+            logger.warning(
+                "HPO is enabled in policy but optional ML dependencies are missing; skipping HPO."
+            )
+
+    if bool(hpo_policy.get("enabled", False)) and optuna_hpo_cls is not None:
         shortlisted = _rank_results(base_results).head(int(hpo_policy.get("shortlist_size", 1)))
 
         for _, row in shortlisted.iterrows():
@@ -222,16 +269,8 @@ async def main() -> None:
                 logger.info("Skipping HPO for unsupported model '%s'", model_name)
                 continue
 
-            try:
-                from models.hpo import OptunaHPO
-            except ImportError as exc:
-                raise RuntimeError(
-                    "HPO is enabled in policy but optional ML dependencies are missing. "
-                    "Install with `pip install pricesentinel[ml]`."
-                ) from exc
-
             logger.info("Running HPO for model '%s'", model_name)
-            hpo = OptunaHPO(
+            hpo = optuna_hpo_cls(
                 algorithm=algorithm,
                 n_trials=int(hpo_policy.get("n_trials", 10)),
                 cv_splits=int(hpo_policy.get("cv_splits", 3)),

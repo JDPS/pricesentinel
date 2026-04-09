@@ -18,6 +18,7 @@ from typing import Any
 
 import pandas as pd
 
+from core.features import _sanitize_numeric_values
 from core.logging_config import setup_logging
 from core.pipeline_builder import PipelineBuilder
 from data_fetchers import auto_register_countries
@@ -29,7 +30,8 @@ FEATURE_SCHEMA_VERSION = "v1"
 DEFAULT_THRESHOLDS: dict[str, float] = {
     "core": 0.10,
     "weather": 0.65,
-    "gas": 0.80,
+    # Gas is often a manual import in MVP deployments; allow absence by default.
+    "gas": 1.00,
     "events": 0.05,
     "fourier": 0.05,
     "volatility": 0.10,
@@ -127,12 +129,15 @@ def _missingness_report(
 
         if not cols:
             miss_ratio = 1.0 if enabled_for_family else 0.0
-            family_pass = not enabled_for_family
-            reason = (
-                "expected columns missing"
-                if enabled_for_family
-                else "feature family disabled and columns absent"
-            )
+            family_pass = (not enabled_for_family) or (miss_ratio <= threshold)
+            if enabled_for_family:
+                reason = (
+                    "expected columns missing"
+                    if not family_pass
+                    else "columns missing but within configured threshold"
+                )
+            else:
+                reason = "feature family disabled and columns absent"
         else:
             miss_ratio = float(features_df[cols].isna().mean().mean())
             family_pass = miss_ratio <= threshold
@@ -333,12 +338,26 @@ def _quality_and_train(
     feature_cols = [c for c in features_df.columns if c not in ("timestamp", target_col)]
 
     x_train = train_df[feature_cols].select_dtypes(include="number")
+    x_train, train_inf_count, train_clipped_count = _sanitize_numeric_values(x_train)
+    if train_inf_count > 0 or train_clipped_count > 0:
+        logger.warning(
+            "Sanitized training matrix: replaced %d inf values, clipped %d large values",
+            train_inf_count,
+            train_clipped_count,
+        )
     y_train = train_df[target_col]
 
     x_holdout = None
     y_holdout = None
     if not holdout_df.empty:
         x_holdout = holdout_df[feature_cols].select_dtypes(include="number")
+        x_holdout, holdout_inf_count, holdout_clipped_count = _sanitize_numeric_values(x_holdout)
+        if holdout_inf_count > 0 or holdout_clipped_count > 0:
+            logger.warning(
+                "Sanitized holdout matrix: replaced %d inf values, clipped %d large values",
+                holdout_inf_count,
+                holdout_clipped_count,
+            )
         y_holdout = holdout_df[target_col]
 
     trainer = get_trainer(country_code, model_name=model_name)

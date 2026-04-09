@@ -87,7 +87,7 @@ python run_pipeline.py --country XX --fetch --start-date 2024-01-01 --end-date 2
 python run_pipeline.py --country XX --all --start-date 2024-01-01 --end-date 2024-01-07
 
 # Fetch data for Portugal
-python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2024-01-31
+python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2026-01-16
 
 # Run full pipeline for Portugal (training assumes sufficient data and configuration)
 python run_pipeline.py --country PT --all --start-date 2024-01-01 --end-date 2024-12-31
@@ -97,6 +97,40 @@ python run_pipeline.py --country PT --forecast --forecast-date 2024-01-08
 ```
 
 ## Advanced Usage
+
+### PT End-to-End (Fetch -> Train -> Champion -> Daily Ops)
+
+These commands are shell-agnostic. Only the env var syntax changes by shell.
+
+Set ENTSO-E key:
+
+- PowerShell: `$env:ENTSOE_API_KEY="your_key"`
+- Bash: `export ENTSOE_API_KEY="your_key"`
+
+Then run:
+
+```bash
+# 1) Backfill/fetch (long ranges are chunked automatically for PT ENTSO-E)
+uv run python run_pipeline.py --country PT --fetch --start-date 2024-01-01 --end-date 2026-01-16
+
+# 2) Reproducible training
+uv run python experiments/run_training.py \
+  --country PT \
+  --model-name baseline \
+  --train-start 2024-01-01 \
+  --train-end 2025-12-31 \
+  --holdout-start 2026-01-01 \
+  --holdout-end 2026-01-16
+
+# 3) Champion selection (will skip unavailable optional models gracefully)
+uv run python experiments/select_champion.py --country PT --start 2024-01-01 --end 2026-01-16
+
+# 4) Daily forecast for D+1
+uv run python experiments/daily_ops.py forecast --country PT --target-date 2026-02-17
+
+# 5) Evaluate D (when actuals are complete)
+uv run python experiments/daily_ops.py evaluate --country PT --target-date 2026-02-16
+```
 
 ### Cross-Validation
 

@@ -272,3 +272,38 @@ async def test_portugal_electricity_fetcher_raises_api_error_on_401(monkeypatch)
         await fetcher.fetch_prices("2024-01-01", "2024-01-02")
 
     assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_portugal_electricity_fetcher_chunks_long_ranges(monkeypatch):
+    """Long fetch ranges should be chunked into multiple ENTSO-E requests."""
+    cfg = DummyConfig()
+    monkeypatch.setenv("ENTSOE_API_KEY", "dummy-key")
+    fetcher = PortugalElectricityFetcher(cfg)
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status.return_value = None
+    mock_response.content = b"<xml/>"
+
+    calls: list[dict[str, str]] = []
+
+    async def _fake_get(*args, **kwargs):
+        params = kwargs.get("params", {})
+        calls.append(params)
+        return mock_response
+
+    mock_client = AsyncMock()
+    mock_client.get.side_effect = _fake_get
+    mock_client_cls = AsyncMock()
+    mock_client_cls.__aenter__.return_value = mock_client
+    mock_client_cls.__aexit__.return_value = None
+
+    monkeypatch.setattr("httpx.AsyncClient", lambda: mock_client_cls)
+    monkeypatch.setattr("xmltodict.parse", lambda _content: _make_price_xml())
+
+    df = await fetcher.fetch_prices("2024-01-01", "2024-03-15")
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(calls) >= 3
+    assert len({call["periodStart"] for call in calls}) >= 3

@@ -11,7 +11,7 @@ from the ENTSO-E Transparency Platform API.
 
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -32,6 +32,7 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
     """
 
     BASE_URL = "https://web-api.tp.entsoe.eu/api"
+    MAX_RANGE_DAYS = 30
 
     def __init__(self, config):
         """
@@ -71,31 +72,40 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
         """
         logger.info(f"Fetching electricity prices from {start_date} to {end_date}")
 
-        # Convert dates to ENTSO-E format (YYYYMMDDhhmm)
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-
-        params = {
-            "securityToken": self.api_key,
-            "documentType": "A44",  # Day-ahead prices
-            "in_Domain": self.domain,
-            "out_Domain": self.domain,
-            "periodStart": start_dt.strftime("%Y%m%d0000"),
-            "periodEnd": end_dt.strftime("%Y%m%d0000"),
-        }
+        chunks = self._date_chunks(start_date, end_date, self.MAX_RANGE_DAYS)
+        frames: list[pd.DataFrame] = []
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.BASE_URL, params=params, timeout=30)
-                response.raise_for_status()
+                for chunk_start, chunk_end in chunks:
+                    start_dt = datetime.strptime(chunk_start, "%Y-%m-%d")
+                    end_dt = datetime.strptime(chunk_end, "%Y-%m-%d") + timedelta(days=1)
 
-            # Parse XML response
-            data = xmltodict.parse(response.content)
+                    params = {
+                        "securityToken": self.api_key,
+                        "documentType": "A44",  # Day-ahead prices
+                        "in_Domain": self.domain,
+                        "out_Domain": self.domain,
+                        "periodStart": start_dt.strftime("%Y%m%d0000"),
+                        "periodEnd": end_dt.strftime("%Y%m%d0000"),
+                    }
 
-            # Extract time series
-            df = self._parse_price_response(data)
+                    response = await client.get(self.BASE_URL, params=params, timeout=30)
+                    response.raise_for_status()
+                    data = xmltodict.parse(response.content)
+                    frames.append(self._parse_price_response(data))
 
-            logger.info(f"Fetched {len(df)} price records")
+            if not frames:
+                return pd.DataFrame(
+                    columns=["timestamp", "price_eur_mwh", "market", "quality_flag"]
+                )
+
+            df = pd.concat(frames, ignore_index=True)
+            if not df.empty:
+                df = df.sort_values("timestamp").drop_duplicates(subset=["timestamp"], keep="first")
+                df = df.reset_index(drop=True)
+
+            logger.info("Fetched %d price records", len(df))
             return df
 
         except httpx.HTTPStatusError as e:
@@ -145,27 +155,37 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
         """
         logger.info(f"Fetching load data from {start_date} to {end_date}")
 
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-
-        params = {
-            "securityToken": self.api_key,
-            "documentType": "A65",  # System total load
-            "processType": "A16",  # Realised
-            "outBiddingZone_Domain": self.domain,
-            "periodStart": start_dt.strftime("%Y%m%d0000"),
-            "periodEnd": end_dt.strftime("%Y%m%d0000"),
-        }
+        chunks = self._date_chunks(start_date, end_date, self.MAX_RANGE_DAYS)
+        frames: list[pd.DataFrame] = []
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.BASE_URL, params=params, timeout=30)
-                response.raise_for_status()
+                for chunk_start, chunk_end in chunks:
+                    start_dt = datetime.strptime(chunk_start, "%Y-%m-%d")
+                    end_dt = datetime.strptime(chunk_end, "%Y-%m-%d") + timedelta(days=1)
+                    params = {
+                        "securityToken": self.api_key,
+                        "documentType": "A65",  # System total load
+                        "processType": "A16",  # Realised
+                        "outBiddingZone_Domain": self.domain,
+                        "periodStart": start_dt.strftime("%Y%m%d0000"),
+                        "periodEnd": end_dt.strftime("%Y%m%d0000"),
+                    }
 
-            data = xmltodict.parse(response.content)
-            df = self._parse_load_response(data)
+                    response = await client.get(self.BASE_URL, params=params, timeout=30)
+                    response.raise_for_status()
+                    data = xmltodict.parse(response.content)
+                    frames.append(self._parse_load_response(data))
 
-            logger.info(f"Fetched {len(df)} load records")
+            if not frames:
+                return pd.DataFrame(columns=["timestamp", "load_mw", "quality_flag"])
+
+            df = pd.concat(frames, ignore_index=True)
+            if not df.empty:
+                df = df.sort_values("timestamp").drop_duplicates(subset=["timestamp"], keep="first")
+                df = df.reset_index(drop=True)
+
+            logger.info("Fetched %d load records", len(df))
             return df
 
         except httpx.HTTPStatusError as e:
@@ -183,6 +203,28 @@ class PortugalElectricityFetcher(ElectricityDataFetcher):
 
         except httpx.RequestError as e:
             raise APIError(f"Connection error to ENTSO-E: {str(e)}") from e
+
+    @staticmethod
+    def _date_chunks(start_date: str, end_date: str, max_days: int) -> list[tuple[str, str]]:
+        """
+        Split an inclusive date range into max_days chunks.
+        """
+        if max_days < 1:
+            raise ValueError("max_days must be >= 1")
+
+        start_dt = date.fromisoformat(start_date)
+        end_dt = date.fromisoformat(end_date)
+        if start_dt > end_dt:
+            return []
+
+        chunks: list[tuple[str, str]] = []
+        current = start_dt
+        while current <= end_dt:
+            chunk_end = min(current + timedelta(days=max_days - 1), end_dt)
+            chunks.append((current.isoformat(), chunk_end.isoformat()))
+            current = chunk_end + timedelta(days=1)
+
+        return chunks
 
     @staticmethod
     def _get_freq(f_resolution: str) -> str:

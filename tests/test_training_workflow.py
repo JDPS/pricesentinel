@@ -62,6 +62,23 @@ def test_missingness_report_fails_when_enabled_family_columns_missing() -> None:
     assert report["families"]["weather"]["passed"] is False
 
 
+def test_missingness_report_allows_missing_family_when_threshold_is_one() -> None:
+    df = _base_df()[["timestamp", "price_eur_mwh", "price_lag_1", "target_price"]]
+    features_cfg = {
+        "use_weather_features": False,
+        "use_gas_features": True,
+        "use_event_features": False,
+        "use_fourier_features": False,
+        "use_price_volatility": False,
+        "use_price_momentum": False,
+    }
+
+    report = _missingness_report(df, features_cfg, {"core": 0.2, "gas": 1.0})
+
+    assert report["passed"] is True
+    assert report["families"]["gas"]["passed"] is True
+
+
 def test_drop_report_counts_required_lag_and_target_rows() -> None:
     ts = pd.date_range("2024-01-01", periods=10, freq="h", tz="UTC")
     prices_df = pd.DataFrame({"timestamp": ts, "price_eur_mwh": range(10)})

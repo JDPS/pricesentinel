@@ -310,9 +310,16 @@ def _evaluate_daily(
 async def _run_forecast_mode(args: argparse.Namespace) -> dict[str, Any]:
     country_code = args.country.upper()
     target_date = args.target_date or (_iso_today_utc() + timedelta(days=1)).isoformat()
+    forecast_dt = date.fromisoformat(target_date)
 
-    start_date = (date.fromisoformat(target_date) - timedelta(days=args.history_days)).isoformat()
-    end_date = target_date
+    if args.history_days < 1:
+        raise ValueError("history-days must be >= 1")
+
+    # Build forecast context from historical data only, ending at D-1.
+    context_end = forecast_dt - timedelta(days=1)
+    context_start = context_end - timedelta(days=args.history_days - 1)
+    start_date = context_start.isoformat()
+    end_date = context_end.isoformat()
 
     auto_register_countries()
     pipeline = PipelineBuilder.create_pipeline(country_code)
