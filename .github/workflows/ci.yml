@@ -76,7 +76,7 @@ jobs:
       # Upload coverage to Codecov (only on ubuntu to avoid duplicates)
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.extras == 'all-extras'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           file: ./coverage.xml
           flags: unittests
