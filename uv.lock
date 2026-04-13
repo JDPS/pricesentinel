@@ -2766,7 +2766,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "opentelemetry-api", specifier = ">=1.40.0" },
     { name = "opentelemetry-proto", specifier = ">=1.40.0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.40.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.41.0" },
     { name = "opentelemetry-semantic-conventions", specifier = ">=0.62b0" },
     { name = "optuna", specifier = ">=4.8.0" },
     { name = "optuna", marker = "extra == 'ml'", specifier = ">=4.1.0" },
