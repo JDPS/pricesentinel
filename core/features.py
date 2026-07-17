@@ -350,6 +350,7 @@ class FeatureEngineer:
         run_id: str,
         start_date: str,
         end_date: str,
+        tune: bool = False,
     ) -> None:
         """
         Train the provided trainer using engineered electricity features.
@@ -408,6 +409,9 @@ class FeatureEngineer:
             len(x_train),
             len(x_val),
         )
+
+        if tune:
+            trainer.optimize_hyperparameters(x_train, y_train, x_val, y_val)
 
         metrics = trainer.train(x_train, y_train, x_val, y_val)
         # Record the training data window for easier benchmarking/comparison.

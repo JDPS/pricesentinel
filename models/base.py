@@ -79,6 +79,20 @@ class BaseTrainer(ABC):
         Generate predictions from the trained model.
         """
 
+    def optimize_hyperparameters(
+        self,
+        x_train: pd.DataFrame,
+        y_train: pd.Series,
+        x_val: pd.DataFrame,
+        y_val: pd.Series,
+        n_trials: int = 50,
+    ) -> dict[str, Any]:
+        """
+        Optimize model hyperparameters using the provided training and validation sets.
+        Subclasses should implement this if they support automated tuning.
+        """
+        raise NotImplementedError("This trainer does not support hyperparameter tuning.")
+
     @abstractmethod
     def save(
         self,

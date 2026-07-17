@@ -133,7 +133,10 @@ async def run_ablation() -> None:
 
         # 4. Train
         logger.info(f"[{stage_name}] Training model...")
-        pipeline.train_model(start_date=train_start, end_date=train_end, model_name="xgboost")
+        tune = stage_name in ("03_Weather_Aware", "04_Fully_Aware")
+        pipeline.train_model(
+            start_date=train_start, end_date=train_end, model_name="xgboost", tune=tune
+        )
 
         # 4. Forecast
         logger.info(f"[{stage_name}] Generating forecasts...")

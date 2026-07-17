@@ -232,6 +232,7 @@ class Pipeline:
         start_date: str | None = None,
         end_date: str | None = None,
         model_name: str = DEFAULT_MODEL_NAME,
+        tune: bool = False,
     ) -> None:
         """
         Train forecasting model.
@@ -252,6 +253,7 @@ class Pipeline:
             run_id=self.run_id,
             start_date=start_date,
             end_date=end_date,
+            tune=tune,
         )
 
         logger.info("=== Stage 4 complete ===\n")
