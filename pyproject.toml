@@ -199,7 +199,7 @@ dependencies = [
     "sympy>=1.14.0",
     "tomli>=2.4.1",
     "tomli-w>=1.2.0",
-    "torch>=2.11.0",
+    "torch>=2.13.0",
     "twine>=6.2.0",
     "types-pyyaml>=6.0.12.20250915",
     "types-requests>=2.32.4.20260324",
@@ -252,7 +252,7 @@ ml = [
     "statsmodels>=0.14.0",
 ]
 deep = [
-    "torch>=2.5.0",
+    "torch>=2.13.0",
 ]
 tracking = [
     "mlflow>=2.19.0",
