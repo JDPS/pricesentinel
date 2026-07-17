@@ -123,16 +123,51 @@ class DataVerifier:
             return False
         return True
 
+    def clip_outliers(
+        self, df: pd.DataFrame, col: str, min_val: float, max_val: float
+    ) -> pd.DataFrame:
+        """
+        Clip values in a column to specified limits and flag clipped rows.
+        """
+        if df.empty or col not in df.columns:
+            return df
+
+        df = df.copy()
+
+        # Identify violations
+        lower_violations = df[col] < min_val
+        upper_violations = df[col] > max_val
+        violations_mask = lower_violations | upper_violations
+
+        flag_col = f"is_clipped_{col}"
+        df[flag_col] = violations_mask.astype("int8")
+
+        if violations_mask.any():
+            logger.warning(
+                f"DataVerifier: Clipping {violations_mask.sum()} outliers in '{col}' "
+                f"to [{min_val}, {max_val}] for {self.country_code}."
+            )
+            df[col] = df[col].clip(lower=min_val, upper=max_val)
+
+        return df
+
     def verify_electricity(
         self, prices_df: pd.DataFrame | None, load_df: pd.DataFrame | None
-    ) -> None:
+    ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
         """
-        Run verification checks on electricity data.
+        Run verification checks on electricity data and clip outliers.
+        Returns the potentially modified DataFrames.
         """
         if prices_df is not None:
             self.check_gaps(prices_df, freq="h")
             # Check price limits
             self.check_limits(
+                prices_df,
+                "price_eur_mwh",
+                self.validation_config["price_min"],
+                self.validation_config["price_max"],
+            )
+            prices_df = self.clip_outliers(
                 prices_df,
                 "price_eur_mwh",
                 self.validation_config["price_min"],
@@ -149,3 +184,11 @@ class DataVerifier:
                 self.validation_config["load_min"],
                 self.validation_config["load_max"],
             )
+            load_df = self.clip_outliers(
+                load_df,
+                "load_mw",
+                self.validation_config["load_min"],
+                self.validation_config["load_max"],
+            )
+
+        return prices_df, load_df

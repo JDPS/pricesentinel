@@ -22,6 +22,7 @@ from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.exceptions import DateRangeError, PriceSentinelError
 from core.features import FeatureEngineer
+from core.imputation import TimeSeriesImputer
 from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
 from core.types import PipelineInfo
@@ -80,6 +81,7 @@ class Pipeline:
         self.feature_engineer = feature_engineer
         self.fetch_stage = fetch_stage
         self.verifier = verifier
+        self.imputer = TimeSeriesImputer(self.country_code)
         self.repository = repository
 
         # Lazy import to avoid circular dependency if strictly typed,
@@ -182,7 +184,26 @@ class Pipeline:
                 "electricity_load_clean", start_date, end_date, source="processed"
             )
 
-            self.verifier.verify_electricity(prices_df, load_df)
+            # 1. Impute missing timestamps and values
+            if prices_df is not None:
+                prices_df = self.imputer.impute_missing_timestamps(prices_df, freq="h")
+                prices_df = self.imputer.impute_column(prices_df, "price_eur_mwh")
+
+            if load_df is not None:
+                load_df = self.imputer.impute_missing_timestamps(load_df, freq="h")
+                load_df = self.imputer.impute_column(load_df, "load_mw")
+
+            # 2. Verify and Clip
+            prices_df, load_df = self.verifier.verify_electricity(prices_df, load_df)
+
+            # 3. Save the fully imputed and verified data back
+            if prices_df is not None:
+                self.repository.save_data(
+                    prices_df, "electricity_prices_clean", start_date, end_date
+                )
+            if load_df is not None:
+                self.repository.save_data(load_df, "electricity_load_clean", start_date, end_date)
+
         except (ValueError, KeyError) as e:
             logger.warning(f"Verification failed: {e}")
 

@@ -10,6 +10,7 @@ This module isolates the complexity of creating a Pipeline and its dependencies
 """
 
 import logging
+from typing import Any
 
 from config.country_registry import ConfigLoader, FetcherFactory
 from core.cleaning import DataCleaner
@@ -28,12 +29,16 @@ class PipelineBuilder:
     """Builder for creating fully configured Pipeline instances."""
 
     @staticmethod
-    def create_pipeline(country_code: str) -> Pipeline:
+    def create_pipeline(
+        country_code: str,
+        features_config_override: dict[str, Any] | None = None,
+    ) -> Pipeline:
         """
         Create a fully configured Pipeline instance for a country.
 
         Args:
             country_code: ISO 3166-1 alpha-2 code
+            features_config_override: Optional dictionary to override feature config flags.
 
         Returns:
             Configured Pipeline instance
@@ -42,6 +47,10 @@ class PipelineBuilder:
 
         # 1. Load Configuration
         config = ConfigLoader.load_country_config(country_code)
+
+        if features_config_override and hasattr(config, "features_config"):
+            if isinstance(config.features_config, dict):
+                config.features_config.update(features_config_override)  # type: ignore
 
         # 2. Create Infrastructure
         data_manager = CountryDataManager(country_code)

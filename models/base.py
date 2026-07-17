@@ -19,12 +19,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
 
 from .model_registry import ModelRegistry
+from .tracking import ExperimentTracker
 
 if TYPE_CHECKING:
     from core.types import ModelConfig
@@ -46,6 +47,19 @@ class BaseTrainer(ABC):
         self.models_root = Path(models_root)
         self.registry = registry or ModelRegistry(models_root)
         self.config: ModelConfig = config or {}
+        self.tracker = ExperimentTracker()
+
+    def log_to_tracker(
+        self, metrics: dict[str, float | str], params: dict[str, Any] | None = None
+    ) -> None:
+        """Helper to log runs to MLflow via the tracker."""
+        # Only log numeric metrics
+        num_metrics = {k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))}
+        self.tracker.log_run(
+            model_name=self.model_name,
+            metrics=num_metrics,
+            params=params,
+        )
 
     @abstractmethod
     def train(
