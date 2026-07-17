@@ -25,7 +25,7 @@ from core.features import FeatureEngineer
 from core.imputation import TimeSeriesImputer
 from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
-from core.types import PipelineInfo
+from core.types import ModelConfig, PipelineInfo
 from core.verification import DataVerifier
 from models import DEFAULT_MODEL_NAME, get_trainer
 
@@ -232,6 +232,7 @@ class Pipeline:
         start_date: str | None = None,
         end_date: str | None = None,
         model_name: str = DEFAULT_MODEL_NAME,
+        model_config: ModelConfig | None = None,
         tune: bool = False,
     ) -> None:
         """
@@ -247,7 +248,7 @@ class Pipeline:
 
         self._validate_dates(start_date, end_date)
 
-        trainer = get_trainer(self.country_code, model_name=model_name)
+        trainer = get_trainer(self.country_code, model_name=model_name, config=model_config)
         self.feature_engineer.train_with_trainer(
             trainer=trainer,
             run_id=self.run_id,

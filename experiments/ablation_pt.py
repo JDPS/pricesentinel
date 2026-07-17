@@ -80,6 +80,17 @@ ablation_stages = [
             "use_event_features": True,
         },
     },
+    {
+        "name": "05_Ensemble_Stacking",
+        "config": {
+            "use_fourier_features": True,
+            "use_price_volatility": True,
+            "use_price_momentum": True,
+            "use_weather_features": True,
+            "use_gas_features": True,
+            "use_event_features": True,
+        },
+    },
 ]
 
 
@@ -134,13 +145,25 @@ async def run_ablation() -> None:
         # 4. Train
         logger.info(f"[{stage_name}] Training model...")
         tune = stage_name in ("03_Weather_Aware", "04_Fully_Aware")
+
+        if stage_name == "05_Ensemble_Stacking":
+            model_name = "ensemble_stacking"
+            model_config = {"hyperparameters": {"sub_models": ["xgboost", "lightgbm"]}}
+        else:
+            model_name = "xgboost"
+            model_config = None
+
         pipeline.train_model(
-            start_date=train_start, end_date=train_end, model_name="xgboost", tune=tune
+            start_date=train_start,
+            end_date=train_end,
+            model_name=model_name,
+            model_config=model_config,  # type: ignore[arg-type]
+            tune=tune,
         )
 
         # 4. Forecast
         logger.info(f"[{stage_name}] Generating forecasts...")
-        pipeline.generate_forecast_range(test_start, test_end, model_name="xgboost")
+        pipeline.generate_forecast_range(test_start, test_end, model_name=model_name)
 
         # 5. Evaluate
         forecasts = []
@@ -150,7 +173,7 @@ async def run_ablation() -> None:
         date_cursor = current
         while date_cursor <= end:
             d_compact = date_cursor.strftime("%Y%m%d")
-            f_name = f"{country}_forecast_{d_compact}_xgboost.csv"
+            f_name = f"{country}_forecast_{d_compact}_{model_name}.csv"
             try:
                 f_df = pipeline.repository.load_forecast(f_name)
                 forecasts.append(f_df)

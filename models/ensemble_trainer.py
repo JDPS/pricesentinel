@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -42,6 +42,58 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _DEFAULT_SUB_MODELS: list[str] = ["baseline"]
+
+
+class WeightedEnsembleArtifact:
+    """Artifact saved by WeightedEnsembleTrainer that provides a predict() method."""
+
+    def __init__(
+        self,
+        sub_model_names: list[str],
+        weights: np.ndarray,
+        country_code: str,
+        run_id: str,
+        models_root: str,
+    ) -> None:
+        self.sub_model_names = sub_model_names
+        self.weights = weights
+        self.country_code = country_code
+        self.run_id = run_id
+        self.models_root = models_root
+
+    def predict(self, x: pd.DataFrame) -> np.ndarray:
+        registry = ModelRegistry(self.models_root)
+        base_preds = []
+        for name in self.sub_model_names:
+            model, _ = registry.load_model(self.country_code, name, self.run_id)
+            base_preds.append(model.predict(x))
+        return cast(np.ndarray, np.column_stack(base_preds) @ self.weights)
+
+
+class StackingEnsembleArtifact:
+    """Artifact saved by StackingTrainer that provides a predict() method."""
+
+    def __init__(
+        self,
+        sub_model_names: list[str],
+        meta_model: Any,
+        country_code: str,
+        run_id: str,
+        models_root: str,
+    ) -> None:
+        self.sub_model_names = sub_model_names
+        self.meta_model = meta_model
+        self.country_code = country_code
+        self.run_id = run_id
+        self.models_root = models_root
+
+    def predict(self, x: pd.DataFrame) -> np.ndarray:
+        registry = ModelRegistry(self.models_root)
+        base_preds = []
+        for name in self.sub_model_names:
+            model, _ = registry.load_model(self.country_code, name, self.run_id)
+            base_preds.append(model.predict(x))
+        return cast(np.ndarray, self.meta_model.predict(np.column_stack(base_preds)))
 
 
 class WeightedEnsembleTrainer(BaseTrainer):
@@ -203,10 +255,13 @@ class WeightedEnsembleTrainer(BaseTrainer):
             trainer.save(country_code=country_code, run_id=run_id)
 
         # Save ensemble metadata (weights) through the registry
-        ensemble_artifact = {
-            "sub_model_names": self.sub_model_names,
-            "weights": self.weights.tolist(),
-        }
+        ensemble_artifact = WeightedEnsembleArtifact(
+            sub_model_names=self.sub_model_names,
+            weights=self.weights,
+            country_code=country_code,
+            run_id=run_id,
+            models_root=str(self.models_root),
+        )
         self.registry.save_model(
             country_code=country_code,
             model_name=self.model_name,
@@ -341,7 +396,7 @@ class StackingTrainer(BaseTrainer):
 
         # ---- Step 2: fit meta-learner -----------------------------------
         try:
-            self.meta_model = Ridge(alpha=self.meta_alpha)
+            self.meta_model = Ridge(alpha=self.meta_alpha, positive=True)
             self.meta_model.fit(oof_matrix, y_train)
         except Exception as exc:
             raise EnsembleError(
@@ -433,12 +488,13 @@ class StackingTrainer(BaseTrainer):
             trainer.save(country_code=country_code, run_id=run_id)
 
         # Save meta-learner and ensemble metadata
-        stacking_artifact = {
-            "sub_model_names": self.sub_model_names,
-            "meta_model": self.meta_model,
-            "meta_model_name": self.meta_model_name,
-            "meta_alpha": self.meta_alpha,
-        }
+        stacking_artifact = StackingEnsembleArtifact(
+            sub_model_names=self.sub_model_names,
+            meta_model=self.meta_model,
+            country_code=country_code,
+            run_id=run_id,
+            models_root=str(self.models_root),
+        )
         self.registry.save_model(
             country_code=country_code,
             model_name=self.model_name,
