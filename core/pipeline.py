@@ -645,6 +645,44 @@ class Pipeline:
         logger.info("=== Cross-Validation complete ===\n")
         return results
 
+    def run_walk_forward_validation(
+        self,
+        start_date: str,
+        end_date: str,
+        initial_train_size: int,
+        step_size: int,
+        model_name: str,
+        model_config: ModelConfig | None = None,
+        mode: str = "expanding",
+    ) -> pd.DataFrame:
+        """
+        Run Walk-Forward Validation.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            initial_train_size: Number of samples for initial training
+            step_size: Number of samples to step forward
+            model_name: Name of the model trainer to use
+            model_config: Configuration for the model trainer
+            mode: Window mode ('expanding' or 'sliding')
+
+        Returns:
+            DataFrame with Walk-Forward results
+        """
+        logger.info("=== Running Walk-Forward Validation ===")
+        self._validate_dates(start_date, end_date)
+
+        from core.cross_validation import CrossValidator
+
+        cv = CrossValidator(self)
+        results = cv.run_walk_forward(
+            start_date, end_date, initial_train_size, step_size, model_name, model_config, mode
+        )
+
+        logger.info("=== Walk-Forward Validation complete ===\n")
+        return results
+
     def get_info(self) -> PipelineInfo:
         """
         Get information about the pipeline and data.
