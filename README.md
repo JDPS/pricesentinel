@@ -13,7 +13,8 @@
 - **Multi-country support**: Extensible architecture for any country/market
 - **Event-aware forecasting**: Incorporates holidays, DST transitions, and manual events
 - **Data quality guards**: Cleaning and basic validation for electricity, weather, and gas data
-- **Feature engineering & training**: Baseline feature set and model training (scikit-learn) for mock country
+- **Advanced Model Ensembling**: Supports XGBoost, LightGBM, Scikit-learn baselines, and Weighted/Stacking ensembles
+- **Robust Validation**: Multi-year Time Series Split Walk-Forward Validation with expanding/sliding windows
 - **Operational monitoring**: Daily health summaries, threshold alerts, and runbooks
 - **Uncertainty-aware forecasts**: Stable p10/p50/p90 intervals with scorecard-driven calibration
 - **Country abstraction**: Add new countries with minimal code changes
@@ -23,9 +24,11 @@
 - **Fully Implemented MVP**: End-to-end pipeline (Fetch → Clean → Features → Train → Forecast) works for Mock Country (XX) and Portugal (PT).
 - **Core Capabilities**:
   - **Inference**: Day-ahead price forecasting with runtime data guards.
-  - **Validation**: Time Series Cross-Validation and Backtesting.
+  - **Validation**: Walk-Forward Validation with expanding/sliding windows to analyze seasonal drift over multi-year datasets (2022-2026).
+  - **Modelling**: Advanced ensembling (Weighted/Stacking) combining XGBoost, LightGBM, and Ridge Regression.
   - **Quality**: Windows-compatible automation, CI/CD guardrails, and daily ops monitoring.
-- **Phases 6–7**: Inference & Training Optimization (Complete).
+- **Phases 4-6**: Advanced Ensembling and Multi-Year Walk-Forward Validation (Complete).
+- **Phase 7**: Macro Integration (TTF Gas) and Model Adaptability (In Progress).
 - **Phases 8–10**: CI/CD (Complete). Monitoring and Deployment (Next).
 
 ### Implemented Countries
@@ -275,16 +278,15 @@ under `data/{country}/processed/forecasts/` for the given model.
 
 ### Phase 4–5 (Complete)
 
-- Feature engineering (lags, rolling windows)
+- Advanced Feature engineering (lags, rolling windows)
+- Advanced Ensembling (XGBoost, LightGBM, Weighted Ensembles)
+- Walk-Forward Validation Engine
 - Runtime guards (Input validation)
-- Inference Engine (Forecasting CLI)
-- Performance Verification (Backtesting, CV)
 
-### Phase 6–7 (Complete)
+### Phase 6–7 (In Progress)
 
-- Model training (Scikit-Learn Random Forest)
-- Model Registry
-- Inference operationalization
+- Phase 6: Multi-Year Validation & Model Drift Analysis (Complete)
+- Phase 7: Macroeconomic Integration (TTF Gas) & Sliding Window Adaptability (In Progress)
 
 ### Phase 8–10 (In Progress)
 
