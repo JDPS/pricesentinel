@@ -233,7 +233,13 @@ class FeatureEngineer:
 
         # Optional load feature
         if load_df is not None and "load_mw" in load_df.columns:
-            load_small = load_df[["timestamp", "load_mw"]]
+            cols_to_keep = ["timestamp", "load_mw"]
+            if "is_imputed_load_mw" in load_df.columns:
+                cols_to_keep.append("is_imputed_load_mw")
+            if "is_clipped_load_mw" in load_df.columns:
+                cols_to_keep.append("is_clipped_load_mw")
+
+            load_small = load_df[cols_to_keep]
             df = df.merge(load_small, on="timestamp", how="left")
 
         # Drop rows with missing target or critical lags
@@ -344,6 +350,7 @@ class FeatureEngineer:
         run_id: str,
         start_date: str,
         end_date: str,
+        tune: bool = False,
     ) -> None:
         """
         Train the provided trainer using engineered electricity features.
@@ -403,6 +410,9 @@ class FeatureEngineer:
             len(x_val),
         )
 
+        if tune:
+            trainer.optimize_hyperparameters(x_train, y_train, x_val, y_val)
+
         metrics = trainer.train(x_train, y_train, x_val, y_val)
         # Record the training data window for easier benchmarking/comparison.
         metrics["train_start_date"] = start_date
@@ -441,6 +451,8 @@ class FeatureEngineer:
             )
         else:
             trainer.save(self.country_code, run_id, metrics=metrics)
+            if hasattr(trainer, "log_to_tracker"):
+                trainer.log_to_tracker(metrics)
 
         logger.info(
             "Training complete for %s (%d samples). Metrics: %s",

@@ -21,10 +21,11 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 try:
+    import optuna
     import xgboost as xgb
 except ImportError as e:
     raise ImportError(
-        "XGBoost is required for XGBoostTrainer. Install with: pip install pricesentinel[ml]"
+        "XGBoost and Optuna required. Install with: pip install pricesentinel[ml]"
     ) from e
 
 from .base import BaseTrainer
@@ -76,6 +77,64 @@ class XGBoostTrainer(BaseTrainer):
 
         self.model = xgb.XGBRegressor(**merged)
         self.metrics: dict[str, float | str] = {}
+        self._tuned_params: dict[str, Any] = {}
+
+    def optimize_hyperparameters(
+        self,
+        x_train: pd.DataFrame,
+        y_train: pd.Series,
+        x_val: pd.DataFrame,
+        y_val: pd.Series,
+        n_trials: int = 50,
+    ) -> dict[str, Any]:
+        """
+        Optimize hyperparameters using Optuna.
+        Updates self.model with the best found parameters combined with the base config.
+        """
+        logger.info(f"Starting Optuna hyperparameter tuning for {n_trials} trials...")
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+        def objective(trial: optuna.Trial) -> float:
+            param = {
+                "max_depth": trial.suggest_int("max_depth", 3, 10),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "min_child_weight": trial.suggest_int("min_child_weight", 1, 7),
+                "n_estimators": 500,  # Fixed for tuning to allow early stopping
+                "random_state": 42,
+                "n_jobs": -1,
+            }
+
+            model = xgb.XGBRegressor(**param)
+
+            fit_kwargs = {
+                "eval_set": [(x_val, y_val)],
+                "verbose": False,
+            }
+
+            model.fit(x_train, y_train, **fit_kwargs)
+
+            y_pred_val = model.predict(x_val)
+            rmse = float(np.sqrt(mean_squared_error(y_val, y_pred_val)))
+            return rmse
+
+        study = optuna.create_study(direction="minimize")
+        study.optimize(objective, n_trials=n_trials)
+
+        logger.info(f"Best trial: {study.best_trial.value}")
+        logger.info(f"Best params: {study.best_trial.params}")
+
+        # Update self.model with the new best params
+        self._tuned_params = study.best_trial.params
+
+        # Merge back with default/config to recreate model
+        base_params = (self.config or {}).get("hyperparameters", {})
+        merged = {**_DEFAULT_PARAMS, **base_params, **self._tuned_params}
+        self.early_stopping_rounds = merged.pop("early_stopping_rounds", 50)
+
+        self.model = xgb.XGBRegressor(**merged)
+        return self._tuned_params
 
     def train(
         self,

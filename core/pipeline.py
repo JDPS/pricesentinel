@@ -22,9 +22,10 @@ from core.cleaning import DataCleaner
 from core.data_manager import CountryDataManager
 from core.exceptions import DateRangeError, PriceSentinelError
 from core.features import FeatureEngineer
+from core.imputation import TimeSeriesImputer
 from core.repository import DataRepository
 from core.stages.fetch_stage import DataFetchStage
-from core.types import PipelineInfo
+from core.types import ModelConfig, PipelineInfo
 from core.verification import DataVerifier
 from models import DEFAULT_MODEL_NAME, get_trainer
 
@@ -80,6 +81,7 @@ class Pipeline:
         self.feature_engineer = feature_engineer
         self.fetch_stage = fetch_stage
         self.verifier = verifier
+        self.imputer = TimeSeriesImputer(self.country_code)
         self.repository = repository
 
         # Lazy import to avoid circular dependency if strictly typed,
@@ -182,7 +184,26 @@ class Pipeline:
                 "electricity_load_clean", start_date, end_date, source="processed"
             )
 
-            self.verifier.verify_electricity(prices_df, load_df)
+            # 1. Impute missing timestamps and values
+            if prices_df is not None:
+                prices_df = self.imputer.impute_missing_timestamps(prices_df, freq="h")
+                prices_df = self.imputer.impute_column(prices_df, "price_eur_mwh")
+
+            if load_df is not None:
+                load_df = self.imputer.impute_missing_timestamps(load_df, freq="h")
+                load_df = self.imputer.impute_column(load_df, "load_mw")
+
+            # 2. Verify and Clip
+            prices_df, load_df = self.verifier.verify_electricity(prices_df, load_df)
+
+            # 3. Save the fully imputed and verified data back
+            if prices_df is not None:
+                self.repository.save_data(
+                    prices_df, "electricity_prices_clean", start_date, end_date
+                )
+            if load_df is not None:
+                self.repository.save_data(load_df, "electricity_load_clean", start_date, end_date)
+
         except (ValueError, KeyError) as e:
             logger.warning(f"Verification failed: {e}")
 
@@ -211,6 +232,8 @@ class Pipeline:
         start_date: str | None = None,
         end_date: str | None = None,
         model_name: str = DEFAULT_MODEL_NAME,
+        model_config: ModelConfig | None = None,
+        tune: bool = False,
     ) -> None:
         """
         Train forecasting model.
@@ -225,12 +248,13 @@ class Pipeline:
 
         self._validate_dates(start_date, end_date)
 
-        trainer = get_trainer(self.country_code, model_name=model_name)
+        trainer = get_trainer(self.country_code, model_name=model_name, config=model_config)
         self.feature_engineer.train_with_trainer(
             trainer=trainer,
             run_id=self.run_id,
             start_date=start_date,
             end_date=end_date,
+            tune=tune,
         )
 
         logger.info("=== Stage 4 complete ===\n")
@@ -619,6 +643,44 @@ class Pipeline:
         results = cv.run(start_date, end_date)
 
         logger.info("=== Cross-Validation complete ===\n")
+        return results
+
+    def run_walk_forward_validation(
+        self,
+        start_date: str,
+        end_date: str,
+        initial_train_size: int,
+        step_size: int,
+        model_name: str,
+        model_config: ModelConfig | None = None,
+        mode: str = "expanding",
+    ) -> pd.DataFrame:
+        """
+        Run Walk-Forward Validation.
+
+        Args:
+            start_date: Start date (YYYY-MM-DD)
+            end_date: End date (YYYY-MM-DD)
+            initial_train_size: Number of samples for initial training
+            step_size: Number of samples to step forward
+            model_name: Name of the model trainer to use
+            model_config: Configuration for the model trainer
+            mode: Window mode ('expanding' or 'sliding')
+
+        Returns:
+            DataFrame with Walk-Forward results
+        """
+        logger.info("=== Running Walk-Forward Validation ===")
+        self._validate_dates(start_date, end_date)
+
+        from core.cross_validation import CrossValidator
+
+        cv = CrossValidator(self)
+        results = cv.run_walk_forward(
+            start_date, end_date, initial_train_size, step_size, model_name, model_config, mode
+        )
+
+        logger.info("=== Walk-Forward Validation complete ===\n")
         return results
 
     def get_info(self) -> PipelineInfo:
