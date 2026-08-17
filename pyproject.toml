@@ -129,7 +129,7 @@ dependencies = [
     "mkdocs-material-extensions>=1.3.1",
     "mkdocstrings>=1.0.3",
     "mkdocstrings-python>=2.0.3",
-    "mlflow>=3.11.1",
+    "mlflow>=3.15.0",
     "mlflow-skinny>=3.10.1",
     "mlflow-tracing>=3.10.1",
     "more-itertools>=10.8.0",
@@ -255,7 +255,7 @@ deep = [
     "torch>=2.13.0",
 ]
 tracking = [
-    "mlflow>=2.19.0",
+    "mlflow>=3.15.0",
 ]
 all = [
     "pricesentinel[dev,test,security,build,docs,ml,deep,tracking]",
